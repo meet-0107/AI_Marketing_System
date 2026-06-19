@@ -20,3 +20,6 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Assets to ignore
+*.svg
