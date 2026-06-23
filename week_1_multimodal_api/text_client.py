@@ -1,7 +1,3 @@
-"""
-Groq API client for generating high-quality marketing text copy in a structured format.
-"""
-
 import os
 import json
 import logging

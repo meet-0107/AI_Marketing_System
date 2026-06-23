@@ -1,7 +1,3 @@
-"""
-Nvidia GenAI API client for generating high-quality marketing images.
-"""
-
 import os
 import base64
 import requests
@@ -24,7 +20,9 @@ class ImageClient:
         # Use provided credentials or fall back to system config
         self.api_key = api_key or config.IMAGE_API_KEY
         self.model = model or config.IMAGE_MODEL
-        self.api_url = api_url or config.IMAGE_API_URL
+        
+        # Build API URL dynamically based on model if not provided
+        self.api_url = api_url or config.IMAGE_API_URL or f"https://ai.api.nvidia.com/v1/genai/{self.model}"
 
         if not self.api_key:
             raise ValueError(
@@ -66,7 +64,7 @@ class ImageClient:
         }
         
         try:
-            logger.info(f"Sending image generation request to Nvidia NIM endpoint: {self.api_url}")
+            logger.info(f"Sending image generation request using model '{self.model}' to Nvidia NIM endpoint: {self.api_url}")
             response = requests.post(self.api_url, headers=headers, json=payload)
             
             if response.status_code == 200:
