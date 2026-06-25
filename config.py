@@ -15,3 +15,6 @@ IMAGE_API_KEY = os.getenv("IMAGE_API_KEY")
 TEXT_MODEL = os.getenv("TEXT_MODEL_NAME")
 IMAGE_MODEL = os.getenv("IMAGE_MODEL_NAME")
 IMAGE_API_URL = os.getenv("IMAGE_API_URL")
+
+# Redis Configuration
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
