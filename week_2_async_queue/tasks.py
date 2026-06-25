@@ -45,7 +45,7 @@ def generate_campaign_task(
     
     # Define two distinct high-converting luxury enterprise promotional prompts
     prompt_1 = image_prompt if image_prompt else (
-        f"Create a high-converting promotional advertisement for {product_name}, featuring a bold luxury marketing headline "
+        f"Create a high-converting promotional advertisement for {product_name} ({product_description}), featuring a bold luxury marketing headline "
         "with elegant typography hierarchy, exclusive offer badge with discount highlight, premium brand logo placement "
         "in strategic position, hero product centered with dramatic cinematic lighting and realistic shadows and reflections, "
         "dynamic floating design accents, premium color palette with sophisticated gradient background, call-to-action button "
@@ -54,7 +54,7 @@ def generate_campaign_task(
         "Fortune 500 campaign standards, award-winning creative direction, 8K ultra HD resolution."
     )
     prompt_2 = (
-        f"Design a luxury enterprise promotional campaign visual for {product_name}, featuring a sophisticated multi-layer "
+        f"Design a luxury enterprise promotional campaign visual for {product_name} ({product_description}), featuring a sophisticated multi-layer "
         "advertising layout with cinematic hero product showcase at center, dramatic studio lighting with premium reflections "
         "and depth, bold attention-grabbing headline with modern typographic system, product benefits highlights in elegant "
         "visual hierarchy, exclusive promotional offer element, premium corporate brand identity integration, dynamic background "
