@@ -43,24 +43,22 @@ def generate_campaign_task(
     self.update_state(state="PROGRESS", meta={"step": "Generating 2 AI promotional images..."})
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
-    # Define two distinct high-converting luxury enterprise promotional prompts
+    # Define two distinct graphic design advertisement poster prompts matching the reference image layout
     prompt_1 = image_prompt if image_prompt else (
-        f"Create a high-converting promotional advertisement for {product_name} ({product_description}), featuring a bold luxury marketing headline "
-        "with elegant typography hierarchy, exclusive offer badge with discount highlight, premium brand logo placement "
-        "in strategic position, hero product centered with dramatic cinematic lighting and realistic shadows and reflections, "
-        "dynamic floating design accents, premium color palette with sophisticated gradient background, call-to-action button "
-        "with conversion-focused design, luxury lifestyle atmosphere, professional advertising layout with strategic white space, "
-        "magazine-style commercial poster quality, photorealistic product rendering with ultra-sharp details, "
-        "Fortune 500 campaign standards, award-winning creative direction, 8K ultra HD resolution."
+        f"A dark luxury executive commercial advertising poster for {product_name} ({product_description}). "
+        "The top features an elegant gold typography headline against a sophisticated dark bokeh office background. "
+        "Below the headline are 4 clean gold feature icons with crisp subtitle labels. In the center sits the hero product, "
+        f"{product_name}, beautifully illuminated with dramatic studio rim lighting on a dark wooden executive desk with realistic reflections. "
+        "The bottom features a framed gold accent banner displaying a sophisticated brand slogan. Overall aesthetic is a Fortune 500 "
+        "dark luxury commercial catalog poster, graphic design layout, 8k ultra-sharp photorealistic render."
     )
     prompt_2 = (
-        f"Design a luxury enterprise promotional campaign visual for {product_name} ({product_description}), featuring a sophisticated multi-layer "
-        "advertising layout with cinematic hero product showcase at center, dramatic studio lighting with premium reflections "
-        "and depth, bold attention-grabbing headline with modern typographic system, product benefits highlights in elegant "
-        "visual hierarchy, exclusive promotional offer element, premium corporate brand identity integration, dynamic background "
-        "with floating geometric accents and luxury texture overlays, high-end e-commerce aesthetic meeting commercial billboard "
-        "standards, realistic photorealistic product rendering with magazine-quality color grading, conversion-focused composition "
-        "built for social media, print and digital campaigns, ultra-detailed award-winning advertising agency execution, 8K photorealistic quality."
+        f"A bright modern corporate graphic design advertisement poster for {product_name} ({product_description}). "
+        "The layout uses a pristine white and navy blue color palette. The top shows a bold modern navy typography headline. "
+        "Along the left side is a vertical column of clean circular feature badges with short descriptive text. In the center is a flawless, "
+        f"bright studio photograph of the hero product, {product_name}, on a clean white marble countertop in a sunlit modern office. "
+        "The bottom features a solid navy blue footer banner with elegant white and gold brand slogans. Overall aesthetic is a premium "
+        "modern e-commerce commercial billboard poster, crisp clean graphic design layout, 8k resolution."
     )
     
     image_paths = []
