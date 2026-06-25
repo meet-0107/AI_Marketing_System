@@ -49,24 +49,25 @@ def generate_campaign_task(
     
     image_paths = []
     
+    # Generate Image 1 independently
     try:
-        # Generate Image 1
         logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
         img1_bytes = image_client.generate_image(prompt_1, tone=tone)
         filename_1 = f"campaign_{self.request.id}_1.jpg"
         save_path_1 = image_client.save_image(img1_bytes, filename_1)
         image_paths.append(save_path_1)
+    except Exception as e:
+        logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
         
-        # Generate Image 2
+    # Generate Image 2 independently
+    try:
         logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
         img2_bytes = image_client.generate_image(prompt_2, tone=tone)
         filename_2 = f"campaign_{self.request.id}_2.jpg"
         save_path_2 = image_client.save_image(img2_bytes, filename_2)
         image_paths.append(save_path_2)
-        
     except Exception as e:
-        logger.error(f"[{self.request.id}] Image generation failed during task execution: {e}")
-        # Append whatever was successfully generated or empty list
+        logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
         
     logger.info(f"[{self.request.id}] Campaign generation completed successfully!")
     

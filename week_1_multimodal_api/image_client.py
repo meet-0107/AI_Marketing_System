@@ -14,7 +14,8 @@ from week_1_multimodal_api.prompt_templates import format_image_prompt
 
 class ImageClient:
     """
-    Client wrapper for interacting with the Nvidia GenAI API to generate images.
+    Client wrapper for interacting with the Nvidia GenAI API to generate images,
+    with robust fallback to Pollinations AI.
     """
     def __init__(self, api_key: str = None, model: str = None, api_url: str = None):
         # Use provided credentials or fall back to system config
@@ -33,9 +34,7 @@ class ImageClient:
                 self.api_url = self.api_url.replace("3.5", "3_5").replace("3-5", "3_5")
 
         if not self.api_key:
-            raise ValueError(
-                "IMAGE_API_KEY is not configured. Please set it in your environment or .env file."
-            )
+            logger.warning("IMAGE_API_KEY is not configured. Will rely on Pollinations AI fallback.")
 
     def generate_image(
         self, 
@@ -48,8 +47,8 @@ class ImageClient:
         Generates an image aligned with a specified marketing tone.
         
         Args:
-            base_prompt: The core description of the image content (e.g. 'A sleek coffee machine on a kitchen counter').
-            tone: The text tone to align the image style with (e.g. 'minimalist', 'futuristic').
+            base_prompt: The core description of the image content.
+            tone: The text tone to align the image style with.
             width: Width of the generated image. Default is 1024.
             height: Height of the generated image. Default is 1024.
             
@@ -72,9 +71,9 @@ class ImageClient:
         }
         
         try:
-            # Check if provider is explicitly set to pollinations
-            provider = os.getenv("IMAGE_PROVIDER", "nvindia").lower()
-            if provider == "pollinations":
+            # Check if provider is explicitly set to pollinations or if API key is missing
+            provider = os.getenv("IMAGE_PROVIDER", "nvidia").lower()
+            if provider == "pollinations" or not self.api_key:
                 logger.info("Using Pollinations AI for image generation...")
                 import urllib.parse
                 safe_prompt = urllib.parse.quote(full_prompt)
@@ -106,20 +105,37 @@ class ImageClient:
                     f"Response: {response.text}"
                 )
                 
-                # Fallback to pollinations if Nvidia fails with 404 (account restrictions)
-                if response.status_code == 404:
-                    logger.warning("Nvidia API returned 404. Falling back to Pollinations AI (free tier)...")
-                    import urllib.parse
-                    safe_prompt = urllib.parse.quote(full_prompt)
-                    url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
-                    fallback_resp = requests.get(url)
-                    if fallback_resp.status_code == 200:
-                        return fallback_resp.content
+                # Universal Fallback to Pollinations AI if Nvidia fails for ANY reason (404, 401, 422, etc.)
+                logger.warning("Nvidia API failed. Falling back to Pollinations AI (free tier)...")
+                import urllib.parse
+                safe_prompt = urllib.parse.quote(full_prompt)
+                url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+                fallback_resp = requests.get(url)
+                if fallback_resp.status_code == 200:
+                    return fallback_resp.content
                     
                 raise RuntimeError(
-                    f"Nvidia API failed (Status {response.status_code}): {response.text}"
+                    f"Nvidia API and Pollinations fallback both failed (Status {response.status_code}): {response.text}"
                 )
                 
         except Exception as e:
-            logger.error(f"Exception during image generation: {e}")
+            logger.error(f"Exception during Nvidia image generation, attempting emergency fallback: {e}")
+            import urllib.parse
+            safe_prompt = urllib.parse.quote(full_prompt)
+            url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+            fallback_resp = requests.get(url)
+            if fallback_resp.status_code == 200:
+                return fallback_resp.content
             raise e
+
+    def save_image(self, image_bytes: bytes, filename: str) -> str:
+        """
+        Saves the generated image bytes to the outputs directory.
+        """
+        output_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "outputs")
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, filename)
+        with open(file_path, "wb") as f:
+            f.write(image_bytes)
+        logger.info(f"Saved generated image to {file_path}")
+        return file_path
