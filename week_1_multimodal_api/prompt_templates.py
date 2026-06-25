@@ -74,17 +74,21 @@ def get_style_modifier(tone: str) -> str:
 
 def format_copy_prompt(product_name: str, product_description: str, target_audience: str = None) -> str:
     """
-    Format the user prompt for generating structured marketing copy.
+    Format the user prompt for generating structured marketing copy (blog post + 3 tweet variants).
     """
     audience_clause = f" for the target audience: {target_audience}" if target_audience else ""
     return (
-        f"Generate marketing copy for a product named '{product_name}'{audience_clause}.\n"
+        f"Generate a comprehensive marketing package for a product named '{product_name}'{audience_clause}.\n"
         f"Product Description: {product_description}\n\n"
         "Please structure your response precisely in the following JSON format:\n"
         "{\n"
-        '  "headline": "A short, catchy, attention-grabbing headline.",\n'
-        '  "body_copy": "A short paragraph (2-3 sentences) explaining the key value proposition and benefits.",\n'
-        '  "call_to_action": "A direct, action-oriented call to action (e.g., Buy Now, Learn More)."\n'
+        '  "headline": "A short, catchy, attention-grabbing campaign headline.",\n'
+        '  "blog_post": "A complete, engaging blog post (3-4 paragraphs) highlighting the problem, solution, features, and value proposition.",\n'
+        '  "tweets": [\n'
+        '    "Tweet 1: A punchy, attention-grabbing tweet highlighting a key benefit.",\n'
+        '    "Tweet 2: An engaging question or problem-solution tweet with a strong hook.",\n'
+        '    "Tweet 3: A direct call-to-action tweet emphasizing value and urgency."\n'
+        '  ]\n'
         "}\n\n"
         "Return ONLY the raw JSON object, without markdown formatting or code blocks."
     )

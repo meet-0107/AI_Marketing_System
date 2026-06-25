@@ -71,11 +71,15 @@ class TextClient:
             # Fallback output in case of failure so downstream components don't crash
             return {
                 "headline": f"Discover {product_name} today!",
-                "body_copy": f"Experience the best of {product_name}. {product_description}",
-                "call_to_action": "Learn More"
+                "blog_post": f"Experience the best of {product_name}. {product_description}. Designed for excellence and engineered to elevate your daily routine, this innovative solution brings unparalleled convenience and performance right to your fingertips.",
+                "tweets": [
+                    f"Transform your workflow with {product_name}! 🚀 #Innovation",
+                    f"Looking for the ultimate upgrade? Discover {product_name} today. ✨ #Tech",
+                    f"Don't settle for less. Experience premium quality with {product_name}. 🔥 #Excellence"
+                ]
             }
 
-    def _clean_and_parse_json(self, raw_text: str) -> Dict[str, str]:
+    def _clean_and_parse_json(self, raw_text: str) -> Dict[str, Any]:
         """
         Cleans markdown wrappers and parses the raw text into a dictionary.
         """
@@ -92,16 +96,26 @@ class TextClient:
         try:
             data = json.loads(cleaned)
             # Ensure required keys exist
-            required_keys = ["headline", "body_copy", "call_to_action"]
-            for key in required_keys:
-                if key not in data:
-                    data[key] = ""
+            if "headline" not in data:
+                data["headline"] = "Transform Your Routine"
+            if "blog_post" not in data:
+                data["blog_post"] = "Experience the future of innovation and performance. Our latest solution brings unparalleled quality and elegance directly to your workflow."
+            if "tweets" not in data or not isinstance(data["tweets"], list):
+                data["tweets"] = [
+                    "Experience premium innovation today! ✨ #Excellence",
+                    "Elevate your daily workflow with our groundbreaking solution. 🚀 #Tech",
+                    "Don't wait to upgrade your lifestyle. Discover the future now. 🔥 #Innovation"
+                ]
             return data
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON response: {e}. Raw content: {raw_text}")
             # Return basic structure on error
             return {
                 "headline": "Ignite Your Vision",
-                "body_copy": raw_text[:300],
-                "call_to_action": "Get Started"
+                "blog_post": raw_text[:500] if raw_text else "Experience cutting-edge innovation designed to streamline your life.",
+                "tweets": [
+                    "Ignite your vision with our latest release! ✨ #Innovation",
+                    "Transform the way you work and live. 🚀 #Excellence",
+                    "Experience the premium standard in technology today. 🔥 #Tech"
+                ]
             }

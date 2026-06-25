@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, CheckCircle2, AlertCircle, Megaphone, ArrowRight } from 'lucide-react';
+import { Loader2, AlertCircle, Megaphone, Twitter, FileText, Image as ImageIcon } from 'lucide-react';
 
 export default function ResultsDisplay({ taskId, status, result, error }) {
   // Empty State
@@ -37,7 +37,7 @@ export default function ResultsDisplay({ taskId, status, result, error }) {
         </div>
         <h3 className="polling-status-title">Generating Your Campaign</h3>
         <p className="polling-status-text">
-          Our advanced artificial intelligence engine is crafting your premium marketing copy and engineering your visual assets. Please hang tight...
+          Our advanced artificial intelligence engine is crafting your premium marketing copy (Blog Post & 3 Tweets) and engineering 2 promotional images. Please hang tight...
         </p>
         <div className="progress-bar-container">
           <div className="progress-bar-fill"></div>
@@ -50,31 +50,70 @@ export default function ResultsDisplay({ taskId, status, result, error }) {
   // Success State
   if (status === 'SUCCESS' && result) {
     const copy = result.copy || {};
-    const assetUrl = result.asset_url || '';
+    const assetUrls = result.asset_urls || [];
+    const tweets = copy.tweets || [];
 
     return (
-      <div className="premium-panel result-card">
-        <div className="result-header">
-          <h2 className="result-title">{copy.headline || 'Your Marketing Campaign'}</h2>
-          <span className="result-badge">Ready</span>
+      <div className="premium-panel result-card" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        {/* Header */}
+        <div className="result-header" style={{ marginBottom: 0 }}>
+          <h2 className="result-title">{copy.headline || 'Your Marketing Campaign Package'}</h2>
+          <span className="result-badge">Package Ready</span>
         </div>
 
-        {assetUrl && (
-          <div className="result-media">
-            <img src={assetUrl} alt={copy.headline || 'Campaign Asset'} className="result-image" />
+        {/* Blog Post Section */}
+        <div className="result-section">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent)' }}>
+            <FileText size={20} />
+            Official Blog Post
+          </h3>
+          <div className="result-body" style={{ marginBottom: 0 }}>
+            <p className="result-text" style={{ whiteSpace: 'pre-line', marginBottom: 0 }}>
+              {copy.blog_post || copy.body_copy || 'No blog post content generated.'}
+            </p>
+          </div>
+        </div>
+
+        {/* 3 Tweet Variants Section */}
+        <div className="result-section">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: '#1da1f2' }}>
+            <Twitter size={20} />
+            3 Tweet Variants
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {tweets.map((tweet, index) => (
+              <div key={index} style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <Twitter size={24} style={{ color: '#1da1f2', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Variant {index + 1}</div>
+                  <p style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{tweet}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2 AI Promotional Images Section */}
+        {assetUrls.length > 0 && (
+          <div className="result-section">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--primary)' }}>
+              <ImageIcon size={20} />
+              2 AI Promotional Images
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {assetUrls.map((url, index) => (
+                <div key={index} className="result-media" style={{ marginBottom: 0 }}>
+                  <div style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    Promotional Asset #{index + 1}
+                  </div>
+                  <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="result-body">
-          <p className="result-text">{copy.body_copy}</p>
-          {copy.call_to_action && (
-            <div className="result-cta">
-              {copy.call_to_action} <ArrowRight size={18} />
-            </div>
-          )}
-        </div>
-
-        <div className="task-id-badge" style={{ marginTop: '1rem' }}>
+        <div className="task-id-badge" style={{ marginTop: '0.5rem' }}>
           Completed Task ID: {taskId}
         </div>
       </div>
