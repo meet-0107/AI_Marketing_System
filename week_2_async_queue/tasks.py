@@ -44,21 +44,29 @@ def generate_campaign_task(
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
     # Define two distinct high-converting premium graphic design advertisement poster prompts
+    base_layout_rules = (
+        "Layout Structure: Large attention-grabbing headline placeholder at the top; Promotional offer badge placeholder "
+        "in the top-right corner; Hero product image prominently displayed in the center, occupying 60-70% of the design; "
+        "Key features section with 3-5 feature icon placeholders below the product; Trust badge or quality guarantee placeholder; "
+        "Strong call-to-action button placeholder near the bottom; Website, contact details, and social media placeholders in the footer. "
+        "Requirements: Keep all text areas as placeholders; Focus on advertisement layout and marketing composition; Product must be "
+        "the primary visual focus; Suitable for e-commerce, social media campaigns, print ads, and corporate promotions; "
+        "High-converting commercial design with premium branding appeal."
+    )
+    
     prompt_1 = image_prompt if image_prompt else (
-        f"A dark luxury executive commercial advertising poster for {product_name} ({product_description}). "
-        "The top features an elegant gold typography headline against a sophisticated dark bokeh office background. "
-        "Below the headline are 4 clean gold feature icons with crisp subtitle labels. In the center sits the hero product, "
-        f"{product_name}, beautifully illuminated with dramatic studio rim lighting on a dark wooden executive desk with realistic reflections. "
-        "The bottom features a framed gold accent banner displaying a sophisticated brand slogan. Overall aesthetic is a Fortune 500 "
-        "dark luxury commercial catalog poster, graphic design layout, 8k ultra-sharp photorealistic render."
+        f"Create a premium promotional advertisement poster for {product_name} ({product_description}). {base_layout_rules} "
+        "Design Style: Luxury commercial advertising, enterprise-level branding, modern corporate aesthetic, premium visual hierarchy, "
+        "elegant typography placeholders, clean composition, cinematic lighting, realistic shadows and reflections, dynamic background elements, "
+        "sophisticated color palette, high-end marketing campaign, magazine-quality artwork, photorealistic product presentation, "
+        "award-winning creative direction, ultra-detailed, professional promotional graphics, 8K ultra HD."
     )
     prompt_2 = (
-        f"A bright modern corporate graphic design advertisement poster for {product_name} ({product_description}). "
-        "The layout uses a pristine white and navy blue color palette. The top shows a bold modern navy typography headline. "
-        "Along the left side is a vertical column of clean circular feature badges with short descriptive text. In the center is a flawless, "
-        f"bright studio photograph of the hero product, {product_name}, on a clean white marble countertop in a sunlit modern office. "
-        "The bottom features a solid navy blue footer banner with elegant white and gold brand slogans. Overall aesthetic is a premium "
-        "modern e-commerce commercial billboard poster, crisp clean graphic design layout, 8k resolution."
+        f"Create a premium promotional advertisement poster for {product_name} ({product_description}). {base_layout_rules} "
+        "Design Style: Luxury commercial advertising, elegant corporate branding, sleek modern aesthetic, pristine visual hierarchy, "
+        "refined typography placeholders, flawless composition, dramatic studio lighting, ultra-realistic shadows and pristine reflections, "
+        "subtle dynamic background elements, premium contrasting color palette, high-end global marketing campaign, magazine-quality commercial artwork, "
+        "photorealistic product showcase, award-winning creative direction, ultra-detailed, professional promotional poster graphics, 8K ultra HD."
     )
     
     image_paths = []
