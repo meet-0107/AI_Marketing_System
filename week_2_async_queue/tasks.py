@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 text_client = TextClient()
 image_client = ImageClient()
 
-@celery_app.task(bind=True, name="tasks.generate_campaign_task")
+@celery_app.task(bind=True, name="generate_campaign_task")
 def generate_campaign_task(
     self,
     product_name: str,
