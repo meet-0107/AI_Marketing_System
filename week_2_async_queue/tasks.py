@@ -43,9 +43,24 @@ def generate_campaign_task(
     self.update_state(state="PROGRESS", meta={"step": "Generating 2 AI promotional images..."})
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
-    # Define two distinct prompts for variety
-    prompt_1 = image_prompt if image_prompt else f"A clean, high-end professional product photo of {product_name}, elegant lighting, 8k resolution"
-    prompt_2 = f"A dynamic lifestyle commercial advertisement showcasing {product_name} in active use, vibrant atmosphere, {tone} styling"
+    # Define two distinct high-end enterprise promotional prompts
+    prompt_1 = image_prompt if image_prompt else (
+        f"A luxury commercial product advertisement featuring {product_name}, positioned as the hero product, "
+        "premium studio environment, sophisticated brand storytelling, elegant composition, cinematic lighting, "
+        "ultra-realistic product photography, premium materials and textures, luxury lifestyle aesthetic, "
+        "soft shadows, reflective surfaces, high-end marketing campaign, Fortune 500 branding style, "
+        "clean and minimal background, depth of field, award-winning advertising photography, photorealistic, "
+        "8K ultra HD, premium color grading, magazine-quality commercial artwork, professional product showcase."
+    )
+    prompt_2 = (
+        f"High-end enterprise promotional campaign for {product_name}, premium corporate branding, "
+        "modern luxury presentation, product displayed in an aspirational business environment, "
+        "elegant visual hierarchy, sophisticated lighting setup, realistic reflections and textures, "
+        "luxury advertising aesthetic, premium brand identity, commercial product photography, "
+        "cinematic atmosphere, ultra-detailed product focus, professional marketing material, "
+        "global brand campaign quality, minimalistic luxury background, photorealistic rendering, "
+        "8K resolution, sharp focus, visually stunning, premium advertisement design, award-winning creative direction."
+    )
     
     image_paths = []
     
