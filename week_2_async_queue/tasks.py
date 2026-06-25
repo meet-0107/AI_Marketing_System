@@ -43,7 +43,7 @@ def generate_campaign_task(
     self.update_state(state="PROGRESS", meta={"step": "Generating 2 AI promotional images..."})
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
-    # Define two distinct graphic design advertisement poster prompts matching the reference image layout
+    # Define two distinct high-converting premium graphic design advertisement poster prompts
     prompt_1 = image_prompt if image_prompt else (
         f"A dark luxury executive commercial advertising poster for {product_name} ({product_description}). "
         "The top features an elegant gold typography headline against a sophisticated dark bokeh office background. "
