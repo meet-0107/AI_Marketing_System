@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Load environment variables from the .env file in the root directory
 base_dir = Path(__file__).resolve().parent
 env_path = base_dir / ".env"
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 # API Keys
 TEXT_API_KEY = os.getenv("TEXT_API_KEY")

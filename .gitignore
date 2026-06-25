@@ -24,3 +24,4 @@ Thumbs.db
 # Assets to ignore
 *.svg
 week_1_multimodal_api/outputs/
+test_system.py

@@ -23,6 +23,14 @@ class ImageClient:
         
         # Build API URL dynamically based on model if not provided
         self.api_url = api_url or config.IMAGE_API_URL or f"https://ai.api.nvidia.com/v1/genai/{self.model}"
+        
+        # Automatically fix Nvidia NIM endpoint URL structure for stable-diffusion-3.5 models
+        if "stable-diffusion" in self.api_url:
+            if "stabilityai/" not in self.api_url:
+                clean_model = self.model.replace("3.5", "3_5").replace("3-5", "3_5")
+                self.api_url = f"https://ai.api.nvidia.com/v1/genai/stabilityai/{clean_model}"
+            else:
+                self.api_url = self.api_url.replace("3.5", "3_5").replace("3-5", "3_5")
 
         if not self.api_key:
             raise ValueError(
@@ -64,6 +72,19 @@ class ImageClient:
         }
         
         try:
+            # Check if provider is explicitly set to pollinations
+            provider = os.getenv("IMAGE_PROVIDER", "nvindia").lower()
+            if provider == "pollinations":
+                logger.info("Using Pollinations AI for image generation...")
+                import urllib.parse
+                safe_prompt = urllib.parse.quote(full_prompt)
+                url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+                response = requests.get(url)
+                if response.status_code == 200:
+                    return response.content
+                else:
+                    raise RuntimeError(f"Pollinations AI failed: {response.text}")
+
             logger.info(f"Sending image generation request using model '{self.model}' to Nvidia NIM endpoint: {self.api_url}")
             response = requests.post(self.api_url, headers=headers, json=payload)
             
@@ -84,6 +105,17 @@ class ImageClient:
                     f"Nvidia NIM API request failed with status code {response.status_code}. "
                     f"Response: {response.text}"
                 )
+                
+                # Fallback to pollinations if Nvidia fails with 404 (account restrictions)
+                if response.status_code == 404:
+                    logger.warning("Nvidia API returned 404. Falling back to Pollinations AI (free tier)...")
+                    import urllib.parse
+                    safe_prompt = urllib.parse.quote(full_prompt)
+                    url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+                    fallback_resp = requests.get(url)
+                    if fallback_resp.status_code == 200:
+                        return fallback_resp.content
+                    
                 raise RuntimeError(
                     f"Nvidia API failed (Status {response.status_code}): {response.text}"
                 )
