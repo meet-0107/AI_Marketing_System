@@ -80,7 +80,7 @@ function App() {
         <div className="nav-badges">
           <div className="system-status">
             <span className="status-dot"></span>
-            Asynchronous Backend Ready
+            AI Engine Ready
           </div>
         </div>
       </header>
@@ -90,7 +90,7 @@ function App() {
         <div className="dashboard-header">
           <h1 className="dashboard-title">Enterprise Campaign Generator</h1>
           <p className="dashboard-subtitle">
-            Generate multimodal marketing copy and visual assets via an asynchronous Celery & FastAPI pipeline.
+            Generate professional marketing copy and premium visual assets through our advanced asynchronous AI engine.
           </p>
         </div>
 

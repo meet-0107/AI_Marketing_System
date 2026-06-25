@@ -37,7 +37,7 @@ export default function ResultsDisplay({ taskId, status, result, error }) {
         </div>
         <h3 className="polling-status-title">Generating Your Campaign</h3>
         <p className="polling-status-text">
-          Our asynchronous Celery worker is crafting your copy with Groq and engineering your visual assets. Please hang tight...
+          Our advanced artificial intelligence engine is crafting your premium marketing copy and engineering your visual assets. Please hang tight...
         </p>
         <div className="progress-bar-container">
           <div className="progress-bar-fill"></div>
