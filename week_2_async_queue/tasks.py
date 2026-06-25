@@ -43,23 +43,24 @@ def generate_campaign_task(
     self.update_state(state="PROGRESS", meta={"step": "Generating 2 AI promotional images..."})
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
-    # Define two distinct high-end enterprise promotional prompts
+    # Define two distinct high-converting luxury enterprise promotional prompts
     prompt_1 = image_prompt if image_prompt else (
-        f"A luxury commercial product advertisement featuring {product_name}, positioned as the hero product, "
-        "premium studio environment, sophisticated brand storytelling, elegant composition, cinematic lighting, "
-        "ultra-realistic product photography, premium materials and textures, luxury lifestyle aesthetic, "
-        "soft shadows, reflective surfaces, high-end marketing campaign, Fortune 500 branding style, "
-        "clean and minimal background, depth of field, award-winning advertising photography, photorealistic, "
-        "8K ultra HD, premium color grading, magazine-quality commercial artwork, professional product showcase."
+        f"Create a high-converting promotional advertisement for {product_name}, featuring a bold luxury marketing headline "
+        "with elegant typography hierarchy, exclusive offer badge with discount highlight, premium brand logo placement "
+        "in strategic position, hero product centered with dramatic cinematic lighting and realistic shadows and reflections, "
+        "dynamic floating design accents, premium color palette with sophisticated gradient background, call-to-action button "
+        "with conversion-focused design, luxury lifestyle atmosphere, professional advertising layout with strategic white space, "
+        "magazine-style commercial poster quality, photorealistic product rendering with ultra-sharp details, "
+        "Fortune 500 campaign standards, award-winning creative direction, 8K ultra HD resolution."
     )
     prompt_2 = (
-        f"High-end enterprise promotional campaign for {product_name}, premium corporate branding, "
-        "modern luxury presentation, product displayed in an aspirational business environment, "
-        "elegant visual hierarchy, sophisticated lighting setup, realistic reflections and textures, "
-        "luxury advertising aesthetic, premium brand identity, commercial product photography, "
-        "cinematic atmosphere, ultra-detailed product focus, professional marketing material, "
-        "global brand campaign quality, minimalistic luxury background, photorealistic rendering, "
-        "8K resolution, sharp focus, visually stunning, premium advertisement design, award-winning creative direction."
+        f"Design a luxury enterprise promotional campaign visual for {product_name}, featuring a sophisticated multi-layer "
+        "advertising layout with cinematic hero product showcase at center, dramatic studio lighting with premium reflections "
+        "and depth, bold attention-grabbing headline with modern typographic system, product benefits highlights in elegant "
+        "visual hierarchy, exclusive promotional offer element, premium corporate brand identity integration, dynamic background "
+        "with floating geometric accents and luxury texture overlays, high-end e-commerce aesthetic meeting commercial billboard "
+        "standards, realistic photorealistic product rendering with magazine-quality color grading, conversion-focused composition "
+        "built for social media, print and digital campaigns, ultra-detailed award-winning advertising agency execution, 8K photorealistic quality."
     )
     
     image_paths = []
