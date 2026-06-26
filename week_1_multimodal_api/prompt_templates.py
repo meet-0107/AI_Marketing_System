@@ -15,7 +15,7 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Avoid hype, exclamation marks, and emojis. Focus on value propositions, professionalism, and industry credibility."
         ),
         "image_style_modifier": (
-            "award-winning commercial advertisement poster layout, pristine visual hierarchy, elegant typography placeholders, "
+            "award-winning commercial advertisement poster layout, pristine visual hierarchy, elegant typography banners, "
             "flawless graphic design composition, dramatic studio product lighting, magazine-quality promotional poster artwork, 8k ultra HD"
         )
     },
@@ -26,7 +26,7 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Use relatable analogies, active verbs, and a few well-placed emojis to create a sense of fun and excitement."
         ),
         "image_style_modifier": (
-            "vibrant commercial advertisement poster layout, dynamic playful visual hierarchy, bold typography placeholders, "
+            "vibrant commercial advertisement poster layout, dynamic playful visual hierarchy, bold typography banners, "
             "colorful graphic design composition, cheerful studio lighting, high-converting promotional marketing poster artwork, 8k resolution"
         )
     },
@@ -37,7 +37,7 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Focus on simplicity, mindfulness, and premium quality. Use short, impactful sentences and avoid unnecessary jargon or hype."
         ),
         "image_style_modifier": (
-            "ultra-minimalist commercial advertisement poster layout, pristine clean visual hierarchy, sophisticated typography placeholders, "
+            "ultra-minimalist commercial advertisement poster layout, pristine clean visual hierarchy, sophisticated typography banners, "
             "elegant graphic design composition, soft natural studio lighting, high-end catalog promotional poster artwork, 8k resolution"
         )
     },
@@ -48,7 +48,7 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Emphasize breakthrough technology, evolution, and shaping the future."
         ),
         "image_style_modifier": (
-            "futuristic tech advertisement poster layout, cyberpunk concept visual hierarchy, glowing typography placeholders, "
+            "futuristic tech advertisement poster layout, cyberpunk concept visual hierarchy, glowing typography banners, "
             "cinematic graphic design composition, volumetric neon studio lighting, high-tech promotional poster artwork, 8k ultra HD"
         )
     }

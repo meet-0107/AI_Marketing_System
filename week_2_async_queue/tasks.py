@@ -44,29 +44,26 @@ def generate_campaign_task(
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
     # Define two distinct high-converting premium graphic design advertisement poster prompts
-    base_layout_rules = (
-        "Layout Structure: Large attention-grabbing headline placeholder at the top; Promotional offer badge placeholder "
-        "in the top-right corner; Hero product image prominently displayed in the center, occupying 60-70% of the design; "
-        "Key features section with 3-5 feature icon placeholders below the product; Trust badge or quality guarantee placeholder; "
-        "Strong call-to-action button placeholder near the bottom; Website, contact details, and social media placeholders in the footer. "
-        "Requirements: Keep all text areas as placeholders; Focus on advertisement layout and marketing composition; Product must be "
-        "the primary visual focus; Suitable for e-commerce, social media campaigns, print ads, and corporate promotions; "
-        "High-converting commercial design with premium branding appeal."
-    )
-    
+    # Replaced ambiguous "placeholder" keywords with explicit visual banner descriptions and sample text so AI generates a true poster layout
     prompt_1 = image_prompt if image_prompt else (
-        f"Create a premium promotional advertisement poster for {product_name} ({product_description}). {base_layout_rules} "
-        "Design Style: Luxury commercial advertising, enterprise-level branding, modern corporate aesthetic, premium visual hierarchy, "
-        "elegant typography placeholders, clean composition, cinematic lighting, realistic shadows and reflections, dynamic background elements, "
-        "sophisticated color palette, high-end marketing campaign, magazine-quality artwork, photorealistic product presentation, "
-        "award-winning creative direction, ultra-detailed, professional promotional graphics, 8K ultra HD."
+        f"A luxury commercial advertisement marketing poster for {product_name} ({product_description}). "
+        "Layout Structure: At the very top, a large bold typography banner displaying 'PREMIUM EXCLUSIVE COLLECTION'. "
+        "In the top-right corner, an eye-catching promotional offer badge displaying 'SPECIAL OFFER'. "
+        f"In the center, a spectacular photorealistic hero shot of {product_name}, occupying 65% of the design with cinematic studio lighting and realistic reflections. "
+        "Directly below the product, a key features section featuring 4 elegant graphical feature icons with clean subtitle labels. "
+        "Near the bottom, a prominent high-converting call-to-action button displaying 'DISCOVER MORE'. "
+        "In the footer, a sophisticated dark horizontal banner containing website and social media icons. "
+        "Design Style: Luxury commercial advertising, enterprise-level branding, modern corporate aesthetic, premium visual hierarchy, clean graphic design composition, magazine-quality artwork, 8K ultra HD."
     )
     prompt_2 = (
-        f"Create a premium promotional advertisement poster for {product_name} ({product_description}). {base_layout_rules} "
-        "Design Style: Luxury commercial advertising, elegant corporate branding, sleek modern aesthetic, pristine visual hierarchy, "
-        "refined typography placeholders, flawless composition, dramatic studio lighting, ultra-realistic shadows and pristine reflections, "
-        "subtle dynamic background elements, premium contrasting color palette, high-end global marketing campaign, magazine-quality commercial artwork, "
-        "photorealistic product showcase, award-winning creative direction, ultra-detailed, professional promotional poster graphics, 8K ultra HD."
+        f"A sleek modern corporate advertisement promotional poster for {product_name} ({product_description}). "
+        "Layout Structure: At the very top, an elegant clean typography header displaying 'INNOVATION & EXCELLENCE'. "
+        "In the top-right corner, a vibrant premium quality guarantee badge displaying '100% GUARANTEE'. "
+        f"In the center, an ultra-detailed, flawless hero photograph of {product_name}, occupying 65% of the canvas with dramatic lighting and soft shadows. "
+        "Below the product, a structured grid of 4 sleek circular feature icons with crisp descriptive labels. "
+        "Near the bottom, a bold conversion-focused call-to-action button displaying 'EXPLORE NOW'. "
+        "In the footer, a pristine contrasting banner with contact details and social media icons. "
+        "Design Style: High-end e-commerce campaign, elegant corporate branding, pristine visual hierarchy, flawless advertisement composition, professional promotional graphics, 8K ultra HD."
     )
     
     image_data_uris = []
