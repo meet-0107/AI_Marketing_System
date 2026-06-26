@@ -59,16 +59,8 @@ async def get_task_status(task_id: str) -> Dict[str, Any]:
     if task_result.state == "SUCCESS":
         result_data = task_result.result
         if result_data:
-            # Map multiple image paths to relative asset URLs for the frontend dashboard
-            asset_urls = []
-            if "image_paths" in result_data:
-                for img_path in result_data["image_paths"]:
-                    p = Path(img_path)
-                    asset_urls.append(f"/api/assets/{p.name}")
-            elif "image_path" in result_data:
-                p = Path(result_data["image_path"])
-                asset_urls.append(f"/api/assets/{p.name}")
-            
+            # Directly pass base64 image data URIs to asset_urls without reading from disk
+            asset_urls = result_data.get("image_data_uris", [])
             result_data["asset_urls"] = asset_urls
         response["result"] = result_data
     elif task_result.state == "FAILURE":

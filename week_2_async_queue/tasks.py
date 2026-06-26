@@ -69,25 +69,25 @@ def generate_campaign_task(
         "photorealistic product showcase, award-winning creative direction, ultra-detailed, professional promotional poster graphics, 8K ultra HD."
     )
     
-    image_paths = []
+    image_data_uris = []
     
-    # Generate Image 1 independently
+    # Generate Image 1 independently without saving to disk
     try:
         logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
         img1_bytes = image_client.generate_image(prompt_1, tone=tone)
-        filename_1 = f"campaign_{self.request.id}_1.jpg"
-        save_path_1 = image_client.save_image(img1_bytes, filename_1)
-        image_paths.append(save_path_1)
+        import base64
+        b64_img1 = base64.b64encode(img1_bytes).decode("utf-8")
+        image_data_uris.append(f"data:image/jpeg;base64,{b64_img1}")
     except Exception as e:
         logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
         
-    # Generate Image 2 independently
+    # Generate Image 2 independently without saving to disk
     try:
         logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
         img2_bytes = image_client.generate_image(prompt_2, tone=tone)
-        filename_2 = f"campaign_{self.request.id}_2.jpg"
-        save_path_2 = image_client.save_image(img2_bytes, filename_2)
-        image_paths.append(save_path_2)
+        import base64
+        b64_img2 = base64.b64encode(img2_bytes).decode("utf-8")
+        image_data_uris.append(f"data:image/jpeg;base64,{b64_img2}")
     except Exception as e:
         logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
         
@@ -98,6 +98,6 @@ def generate_campaign_task(
         "product_name": product_name,
         "tone": tone,
         "copy": copy_result,
-        "image_paths": image_paths,
+        "image_data_uris": image_data_uris,
         "status": "SUCCESS"
     }
