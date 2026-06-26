@@ -14,24 +14,27 @@ from week_1_multimodal_api.prompt_templates import format_image_prompt
 
 class ImageClient:
     """
-    Client wrapper for interacting with Hugging Face Inference API (FLUX.1-schnell) 
+    Client wrapper for interacting with Google Gemini API (Imagen 3) and Hugging Face Inference API 
     to generate images, with robust fallback to Pollinations AI.
     """
     def __init__(self, api_key: str = None, model: str = None, api_url: str = None):
         # Use provided credentials or fall back to system config
         self.api_key = api_key or config.IMAGE_API_KEY
-        self.model = model or config.IMAGE_MODEL or "black-forest-labs/FLUX.1-schnell"
+        self.model = model or config.IMAGE_MODEL or "imagen-3.0-generate-002"
+        self.provider = getattr(config, "IMAGE_PROVIDER", os.getenv("IMAGE_LLM_PROVIDER", "gemini")).lower()
         
-        # Build API URL dynamically based on model if not provided
+        # Build API URL dynamically based on model/provider if not provided
         if api_url:
             self.api_url = api_url
         elif config.IMAGE_API_URL:
             self.api_url = config.IMAGE_API_URL
+        elif self.provider == "gemini" or "imagen" in self.model:
+            self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:predict?key={self.api_key}"
         else:
             self.api_url = f"https://api-inference.huggingface.co/models/{self.model}"
 
         if not self.api_key:
-            logger.warning("HUGGINGFACEHUB_API_TOKEN is not configured. Will rely on Pollinations AI fallback.")
+            logger.warning("IMAGE_API_KEY is not configured. Will rely on Pollinations AI fallback.")
 
     def generate_image(
         self, 
@@ -49,8 +52,7 @@ class ImageClient:
         
         try:
             # Check if provider is explicitly set to pollinations or if API key is missing
-            provider = os.getenv("IMAGE_PROVIDER", "").lower()
-            if provider == "pollinations" or not self.api_key:
+            if self.provider == "pollinations" or not self.api_key:
                 logger.info("Using Pollinations AI for image generation...")
                 import urllib.parse
                 safe_prompt = urllib.parse.quote(full_prompt)
@@ -61,26 +63,46 @@ class ImageClient:
                 else:
                     raise RuntimeError(f"Pollinations AI failed: {response.text}")
 
-            logger.info(f"Sending image generation request using model '{self.model}' to Hugging Face endpoint: {self.api_url}")
+            logger.info(f"Sending image generation request using model '{self.model}' (Provider: {self.provider})")
             
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-            }
-            
-            payload = {
-                "inputs": full_prompt,
-                "parameters": {
-                    "width": width,
-                    "height": height
+            # Handle Gemini Imagen 3 format vs Hugging Face Inference API format
+            if "generativelanguage.googleapis.com" in self.api_url:
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "instances": [
+                        {"prompt": full_prompt}
+                    ],
+                    "parameters": {
+                        "sampleCount": 1,
+                        "aspectRatio": "1:1"
+                    }
                 }
-            }
-            
-            response = requests.post(self.api_url, headers=headers, json=payload)
-            if response.status_code == 200:
-                logger.info("Successfully received image bytes from Hugging Face Inference API.")
-                return response.content
-            else:
-                logger.error(f"Hugging Face API failed with status {response.status_code}: {response.text}")
+                response = requests.post(self.api_url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    response_data = response.json()
+                    predictions = response_data.get("predictions", [])
+                    if not predictions:
+                        raise ValueError("No image predictions returned from Gemini Imagen API.")
+                    b64_str = predictions[0].get("bytesBase64Encoded")
+                    if not b64_str:
+                        raise ValueError("No base64 encoded image found in Gemini prediction.")
+                    image_bytes = base64.b64decode(b64_str)
+                    logger.info("Successfully received and decoded image from Gemini Imagen 3 API.")
+                    return image_bytes
+                else:
+                    logger.error(f"Gemini Imagen API failed with status {response.status_code}: {response.text}")
+            elif "api-inference.huggingface.co" in self.api_url:
+                headers = {"Authorization": f"Bearer {self.api_key}"}
+                payload = {
+                    "inputs": full_prompt,
+                    "parameters": {"width": width, "height": height}
+                }
+                response = requests.post(self.api_url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    logger.info("Successfully received image bytes from Hugging Face Inference API.")
+                    return response.content
+                else:
+                    logger.error(f"Hugging Face API failed with status {response.status_code}: {response.text}")
             
             # Universal Fallback to Pollinations AI if primary API fails for ANY reason
             logger.warning("Primary Image API failed. Falling back to Pollinations AI (free tier)...")

@@ -9,11 +9,12 @@ load_dotenv(dotenv_path=env_path, override=True)
 
 # API Keys
 TEXT_API_KEY = os.getenv("TEXT_API_KEY")
-IMAGE_API_KEY = os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("IMAGE_API_KEY")
+IMAGE_API_KEY = os.getenv("IMAGE_API_KEY") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Model Configuration
 TEXT_MODEL = os.getenv("TEXT_MODEL_NAME")
-IMAGE_MODEL = os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "black-forest-labs/FLUX.1-schnell")
+IMAGE_MODEL = os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "imagen-3.0-generate-002")
+IMAGE_PROVIDER = os.getenv("IMAGE_LLM_PROVIDER") or os.getenv("IMAGE_PROVIDER", "gemini")
 IMAGE_API_URL = os.getenv("IMAGE_API_URL")
 
 # Redis Configuration
