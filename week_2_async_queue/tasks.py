@@ -24,7 +24,7 @@ def generate_campaign_task(
     """
     Celery background task that generates a complete campaign package:
     - Structured copy (Headline, Blog Post, 3 Tweet Variants) via Groq LLM
-    - 2 distinct AI promotional images via Nvidia NIM / Pollinations fallback
+    - 2 distinct AI promotional images via Hugging Face FLUX / Pollinations fallback
     """
     logger.info(f"[{self.request.id}] Starting asynchronous campaign generation for '{product_name}' (Tone: {tone})")
     

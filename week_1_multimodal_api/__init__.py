@@ -1,5 +1,5 @@
 """
-Multimodal API Integration Client exports for Groq text generation and Nvidia NIM image generation.
+Multimodal API Integration Client exports for Groq text generation and Hugging Face FLUX image generation.
 """
 
 from week_1_multimodal_api.text_client import TextClient
