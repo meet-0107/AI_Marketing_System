@@ -15,8 +15,8 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Avoid hype, exclamation marks, and emojis. Focus on value propositions, professionalism, and industry credibility."
         ),
         "image_style_modifier": (
-            "professional corporate branding aesthetic, elegant corporate design, office studio lighting, "
-            "neutral color palette, clean backdrop, sharp focus, high-end DSLR product photography, 8k resolution"
+            "award-winning commercial advertisement poster layout, pristine visual hierarchy, elegant typography placeholders, "
+            "flawless graphic design composition, dramatic studio product lighting, magazine-quality promotional poster artwork, 8k ultra HD"
         )
     },
     "playful": {
@@ -26,8 +26,8 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Use relatable analogies, active verbs, and a few well-placed emojis to create a sense of fun and excitement."
         ),
         "image_style_modifier": (
-            "vibrant and playful aesthetic, whimsical illustration style, bright pastel color palette, "
-            "cheerful studio lighting, 3D claymation style, friendly design, high-quality digital render, colorful composition"
+            "vibrant commercial advertisement poster layout, dynamic playful visual hierarchy, bold typography placeholders, "
+            "colorful graphic design composition, cheerful studio lighting, high-converting promotional marketing poster artwork, 8k resolution"
         )
     },
     "minimalist": {
@@ -37,8 +37,8 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Focus on simplicity, mindfulness, and premium quality. Use short, impactful sentences and avoid unnecessary jargon or hype."
         ),
         "image_style_modifier": (
-            "minimalist aesthetic, clean composition, soft natural lighting, pastel and earthy color tones, "
-            "clean line art, high-end design catalog photography, simple background, calming atmosphere, hyper-minimalist"
+            "ultra-minimalist commercial advertisement poster layout, pristine clean visual hierarchy, sophisticated typography placeholders, "
+            "elegant graphic design composition, soft natural studio lighting, high-end catalog promotional poster artwork, 8k resolution"
         )
     },
     "futuristic": {
@@ -48,8 +48,8 @@ TONE_CONFIG: Dict[str, Dict[str, str]] = {
             "Emphasize breakthrough technology, evolution, and shaping the future."
         ),
         "image_style_modifier": (
-            "futuristic tech aesthetic, cyberpunk concept art, dark background with neon blue and purple accents, "
-            "holographic elements, volumetric lighting, high tech interface, cinematic atmosphere, octane render, 3D digital art"
+            "futuristic tech advertisement poster layout, cyberpunk concept visual hierarchy, glowing typography placeholders, "
+            "cinematic graphic design composition, volumetric neon studio lighting, high-tech promotional poster artwork, 8k ultra HD"
         )
     }
 }

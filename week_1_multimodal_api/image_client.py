@@ -15,7 +15,7 @@ from week_1_multimodal_api.prompt_templates import format_image_prompt
 class ImageClient:
     """
     Client wrapper for interacting with Google Gemini API (Imagen 3) and Hugging Face Inference API 
-    to generate images, with robust fallback to Pollinations AI.
+    to generate images, with robust fallback to Pollinations AI (Flux Pro model).
     No images are saved to disk; everything operates purely in-memory.
     """
     def __init__(self, api_key: str = None, model: str = None, api_url: str = None):
@@ -35,7 +35,7 @@ class ImageClient:
             self.api_url = f"https://api-inference.huggingface.co/models/{self.model}"
 
         if not self.api_key:
-            logger.warning("IMAGE_API_KEY is not configured. Will rely on Pollinations AI fallback.")
+            logger.warning("IMAGE_API_KEY is not configured. Will rely on Pollinations AI Flux fallback.")
 
     def generate_image(
         self, 
@@ -54,10 +54,10 @@ class ImageClient:
         try:
             # Check if provider is explicitly set to pollinations or if API key is missing
             if self.provider == "pollinations" or not self.api_key:
-                logger.info("Using Pollinations AI for in-memory image generation...")
+                logger.info("Using Pollinations AI (Flux model) for in-memory image generation...")
                 import urllib.parse
                 safe_prompt = urllib.parse.quote(full_prompt)
-                url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+                url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&model=flux&nologo=true"
                 response = requests.get(url)
                 if response.status_code == 200:
                     return response.content
@@ -105,11 +105,11 @@ class ImageClient:
                 else:
                     logger.error(f"Hugging Face API failed with status {response.status_code}: {response.text}")
             
-            # Universal Fallback to Pollinations AI if primary API fails for ANY reason
-            logger.warning("Primary Image API failed. Falling back to Pollinations AI (free tier)...")
+            # Universal Fallback to Pollinations AI (Flux Pro model) if primary API fails for ANY reason
+            logger.warning("Primary Image API failed. Falling back to Pollinations AI (Flux model)...")
             import urllib.parse
             safe_prompt = urllib.parse.quote(full_prompt)
-            url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+            url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&model=flux&nologo=true"
             fallback_resp = requests.get(url)
             if fallback_resp.status_code == 200:
                 return fallback_resp.content
@@ -120,7 +120,7 @@ class ImageClient:
             logger.error(f"Exception during image generation, attempting emergency fallback: {e}")
             import urllib.parse
             safe_prompt = urllib.parse.quote(full_prompt)
-            url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&nologo=true"
+            url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width={width}&height={height}&model=flux&nologo=true"
             fallback_resp = requests.get(url)
             if fallback_resp.status_code == 200:
                 return fallback_resp.content
