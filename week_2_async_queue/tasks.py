@@ -7,6 +7,7 @@ from typing import Dict, Any
 from week_2_async_queue.celery_app import celery_app
 from week_1_multimodal_api.text_client import TextClient
 from week_1_multimodal_api.image_client import ImageClient
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,75 @@ def generate_campaign_task(
     - 2 distinct AI promotional images via Google Gemini API (Imagen 3)
     """
     logger.info(f"[{self.request.id}] Starting asynchronous campaign generation for '{product_name}' (Tone: {tone})")
+    
+    if getattr(config, "MOCK_GENERATION", False):
+        logger.info(f"[{self.request.id}] MOCK GENERATION ACTIVE. Bypassing external APIs.")
+        self.update_state(state="PROGRESS", meta={"step": "Generating mock campaign package (Bypassing APIs)..."})
+        time.sleep(1.0)
+        
+        mock_desc = product_description or f"Experience the future of innovation and performance with {product_name}."
+        mock_copy = {
+            "product_description": mock_desc,
+            "headline": f"Discover {product_name} Today Now",
+            "funny_slogan": f"Sleek and Clever Solution Now",
+            "features": [
+                "Feature 1: Premium Build Quality",
+                "Feature 2: Next-Gen Innovation",
+                "Feature 3: Dynamic Operations",
+                "Feature 4: High Performance",
+                "Feature 5: Sleek Minimalist Design",
+                "Feature 6: 100% Quality Inspected"
+            ],
+            "blog_post": f"# {product_name}: The Future of Innovation\\n\\n## Introduction\\n\\nLooking for a premium B2C solution that combines style, performance, and efficiency? The **{product_name}** is designed to deliver outstanding value. Whether you are a professional or enthusiast, this product is built to fit seamlessly into your everyday life.\\n\\n---\\n\\n## Key Features\\n\\n* **Premium Build** – Designed using high-quality materials.\\n* **Smart Performance** – Delivers speed and reliability.\\n* **Modern Style** – Enhances your daily aesthetic.\\n* **Easy to Use** – Unparalleled convenience at your fingertips.\\n\\n---\\n\\n## Benefits\\n\\n* Improves your daily experience\\n* Excellent value for money\\n* Stylish and modern design",
+            "tweets": [
+                f"Upgrade your routine with {product_name}! 🚀 #Innovation #NewProduct",
+                f"Sleek design meets premium performance. Discover the future today. ✨ #Tech #NewProduct",
+                f"Don't settle for less. Experience premium quality. 🔥 #Brand #Innovation"
+            ],
+            "image_banners": [
+                {
+                    "badge": "✨ EXCLUSIVE EDITION",
+                    "title": f"ULTRA PREMIUM {product_name.upper()[:12]}",
+                    "bullet1": "Next-Gen Design",
+                    "bullet2": "Elite Innovation",
+                    "extra_tag": "98% Customer Satisfaction",
+                    "supporting_message": "A premium solution engineered to enhance comfort, style, and daily productivity."
+                },
+                {
+                    "badge": "🏆 100% QUALITY INSPECTED",
+                    "title": "UNMATCHED ELEGANCE",
+                    "bullet1": "Claim Your Upgrade",
+                    "bullet2": "Offer Ends Soon",
+                    "extra_tag": "Limited Time Exclusive",
+                    "supporting_message": "An elegant addition that complements your modern lifestyle and enhances daily workflow."
+                }
+            ]
+        }
+        
+        image_data_uris = []
+        try:
+            import requests
+            import base64
+            img_r = requests.get("https://images.unsplash.com/photo-1602143407151-01114192003f?auto=format&fit=crop&w=512&q=80", timeout=3)
+            if img_r.status_code == 200:
+                b64_img = base64.b64encode(img_r.content).decode("utf-8")
+                image_data_uris = [f"data:image/jpeg;base64,{b64_img}", f"data:image/jpeg;base64,{b64_img}"]
+        except Exception:
+            pass
+            
+        if not image_data_uris:
+            tiny_grey_pixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            image_data_uris = [tiny_grey_pixel, tiny_grey_pixel]
+            
+        return {
+            "task_id": self.request.id,
+            "product_name": product_name,
+            "product_description": mock_desc,
+            "tone": tone,
+            "copy": mock_copy,
+            "image_data_uris": image_data_uris,
+            "status": "SUCCESS"
+        }
     
     # 1. Generate Structured Copy (Blog Post + 3 Tweets)
     self.update_state(state="PROGRESS", meta={"step": "Generating structured marketing copy (Blog Post + 3 Tweets)..."})

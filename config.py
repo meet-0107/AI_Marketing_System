@@ -18,6 +18,7 @@ TEXT_MODEL = os.getenv("TEXT_MODEL_NAME")
 IMAGE_MODEL = os.getenv("MODEL") or os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "@cf/black-forest-labs/flux-1-schnell")
 IMAGE_PROVIDER = os.getenv("IMAGE_LLM_PROVIDER") or os.getenv("IMAGE_PROVIDER", "cloudflare")
 IMAGE_API_URL = os.getenv("IMAGE_API_URL")
+MOCK_GENERATION = os.getenv("MOCK_GENERATION", "false").lower() == "true"
 
 # Redis Configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
