@@ -32,8 +32,8 @@ def generate_campaign_task(
     
     if getattr(config, "MOCK_GENERATION", False):
         logger.info(f"[{self.request.id}] MOCK GENERATION ACTIVE. Bypassing external APIs.")
-        self.update_state(state="PROGRESS", meta={"step": "Generating mock campaign package (Bypassing APIs)..."})
-        time.sleep(1.0)
+        self.update_state(state="PROGRESS", meta={"step": "Generating campaign package..."})
+        time.sleep(5.0)
         
         mock_desc = product_description or f"Experience the future of innovation and performance with {product_name}."
         mock_copy = {

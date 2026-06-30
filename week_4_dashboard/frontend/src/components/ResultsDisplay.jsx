@@ -60,7 +60,7 @@ const renderBlogPost = (text) => {
   });
 };
 
-export default function ResultsDisplay({ taskId, status, result, error }) {
+export default function ResultsDisplay({ taskId, status, progressStep, result, error }) {
   // Empty State
   if (!taskId && !result && !error) {
     return (
@@ -89,19 +89,35 @@ export default function ResultsDisplay({ taskId, status, result, error }) {
 
   // Polling / Progress State
   if (status && status !== 'SUCCESS' && status !== 'FAILURE') {
+    const isCopyDone = progressStep && (progressStep.includes('images') || progressStep.includes('completed') || progressStep.includes('mock') || progressStep.includes('MOCK'));
+    const isImagesActive = progressStep && (progressStep.includes('images') || progressStep.includes('mock') || progressStep.includes('MOCK'));
+
     return (
-      <div className="premium-panel polling-container">
-        <div className="polling-icon-wrapper">
-          <Loader2 size={36} className="status-dot" style={{ animation: 'spin 1.5s linear infinite', backgroundColor: 'transparent' }} />
+      <div className="premium-panel unique-loader-container">
+        <div className="hologram-orb">
+          <div className="orb-ring"></div>
+          <div className="orb-ring"></div>
+          <div className="orb-ring"></div>
+          <div className="orb-core"></div>
         </div>
-        <h3 className="polling-status-title">Generating Your Campaign</h3>
-        <p className="polling-status-text">
-          Our advanced artificial intelligence engine is crafting your premium marketing copy (Blog Post & 3 Tweets) and engineering 2 promotional images. Please hang tight...
+        
+        <h3 className="glitch-text">
+          Crafting Your Campaign
+        </h3>
+        
+        <p className="loading-subtitle">
+          Generating your assets...
         </p>
-        <div className="progress-bar-container">
-          <div className="progress-bar-fill"></div>
-        </div>
-        <div className="task-id-badge">Task ID: {taskId}</div>
+
+        {/* Live Step Badge */}
+        {progressStep && (
+          <div style={{ marginTop: '2.5rem', padding: '0.6rem 1.5rem', backgroundColor: 'var(--bg-main)', border: '1px solid rgba(37,99,235,0.3)', borderRadius: '30px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '0.75rem', animation: 'pulse 2s infinite', boxShadow: '0 0 15px rgba(37,99,235,0.15)' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' }}></span>
+            {progressStep.toUpperCase()}
+          </div>
+        )}
+
+
       </div>
     );
   }
@@ -899,9 +915,7 @@ export default function ResultsDisplay({ taskId, status, result, error }) {
           </div>
         )}
 
-        <div className="task-id-badge" style={{ marginTop: '0.5rem' }}>
-          Completed Task ID: {taskId}
-        </div>
+
       </div>
     );
   }

@@ -7,6 +7,7 @@ import { createCampaign, getCampaignStatus } from './api';
 function App() {
   const [activeTaskId, setActiveTaskId] = useState(null);
   const [status, setStatus] = useState(null);
+  const [progressStep, setProgressStep] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -17,6 +18,7 @@ function App() {
     // Reset state
     setActiveTaskId(null);
     setStatus(null);
+    setProgressStep(null);
     setResult(null);
     setError(null);
     setIsGenerating(true);
@@ -39,6 +41,7 @@ function App() {
       try {
         const data = await getCampaignStatus(activeTaskId);
         setStatus(data.status);
+        setProgressStep(data.progress_step);
 
         if (data.status === 'SUCCESS') {
           setResult(data.result);
@@ -95,6 +98,7 @@ function App() {
           <ResultsDisplay
             taskId={activeTaskId}
             status={status}
+            progressStep={progressStep}
             result={result}
             error={error}
           />
