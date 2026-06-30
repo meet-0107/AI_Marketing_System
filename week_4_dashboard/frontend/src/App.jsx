@@ -70,17 +70,13 @@ function App() {
   return (
     <div className="app-container">
       {/* Navigation */}
-      <header className="top-nav">
-        <div className="logo-container">
-          <div className="logo-icon">
-            <Layers size={22} />
-          </div>
-          <span className="logo-text">AI Marketing Studio</span>
-        </div>
-        <div className="nav-badges">
-          <div className="system-status">
-            <span className="status-dot"></span>
-            AI Engine Ready
+      <header className="top-nav" style={{ padding: '1rem 0' }}>
+        <div style={{ maxWidth: '1320px', width: '100%', margin: '0 auto', padding: '0 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="logo-container">
+            <div className="logo-icon">
+              <Layers size={22} />
+            </div>
+            <span className="logo-text">AI Marketing Studio</span>
           </div>
         </div>
       </header>

@@ -16,7 +16,7 @@ OUTPUTS_DIR = Path(__file__).resolve().parent.parent / "week_1_multimodal_api" /
 
 class CampaignRequest(BaseModel):
     product_name: str
-    product_description: str
+    product_description: Optional[str] = None
     tone: str
     target_audience: Optional[str] = None
     image_prompt: Optional[str] = None

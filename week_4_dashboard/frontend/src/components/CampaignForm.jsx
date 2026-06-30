@@ -4,7 +4,6 @@ import { Sparkles } from 'lucide-react';
 export default function CampaignForm({ onSubmit, isGenerating }) {
   const [formData, setFormData] = useState({
     product_name: '',
-    product_description: '',
     tone: 'professional',
     target_audience: '',
     image_prompt: '',
@@ -43,50 +42,6 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
           />
         </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="product_description">Product Description *</label>
-          <textarea
-            id="product_description"
-            name="product_description"
-            required
-            className="form-textarea"
-            placeholder="Describe the key features, value proposition, and unique selling points..."
-            value={formData.product_description}
-            onChange={handleChange}
-            disabled={isGenerating}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="tone">Marketing Tone</label>
-          <select
-            id="tone"
-            name="tone"
-            className="form-select"
-            value={formData.tone}
-            onChange={handleChange}
-            disabled={isGenerating}
-          >
-            <option value="professional">Professional & Corporate</option>
-            <option value="playful">Playful & Enthusiastic</option>
-            <option value="minimalist">Minimalist & Elegant</option>
-            <option value="futuristic">Futuristic & Visionary</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="target_audience">Target Audience (Optional)</label>
-          <input
-            id="target_audience"
-            name="target_audience"
-            type="text"
-            className="form-input"
-            placeholder="e.g., Busy tech professionals, remote workers"
-            value={formData.target_audience}
-            onChange={handleChange}
-            disabled={isGenerating}
-          />
-        </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="image_prompt">Custom Image Prompt (Optional)</label>
