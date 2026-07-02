@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Dict, Any
 from groq import Groq
+import google.generativeai as genai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,18 +18,25 @@ class TextClient:
     """
     Client wrapper for interacting with the Groq API to generate marketing copy.
     """
-    def __init__(self, api_key: str = None, model: str = None):
+    def __init__(self, api_key: str = None, model: str = None, provider: str = None):
         # Use provided credentials or fall back to system config
         self.api_key = api_key or config.TEXT_API_KEY
         self.model = model or config.TEXT_MODEL
+        self.provider = provider or getattr(config, 'TEXT_LLM_PROVIDER', 'groq')
         
         if not self.api_key:
             raise ValueError(
                 "TEXT_API_KEY is not configured. Please set it in your environment or .env file."
             )
         
-        # Initialize Groq client
-        self.client = Groq(api_key=self.api_key)
+        # Initialize client based on provider
+        if self.provider == 'gemini':
+            genai.configure(api_key=self.api_key)
+            if self.model and self.model.lower() == "gemini 1.5 flash":
+                self.model = "gemini-1.5-flash"
+            self.model = self.model or 'gemini-1.5-flash'
+        else:
+            self.client = Groq(api_key=self.api_key)
 
     def generate_copy(
         self, 
@@ -48,27 +56,44 @@ class TextClient:
         user_prompt = format_copy_prompt(product_name, product_description, target_audience)
 
         try:
-            logger.info(f"Sending text generation request to Groq using model: {self.model}")
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature,
-                max_tokens=1800,
-                response_format={"type": "json_object"}
-            )
+            logger.info(f"Sending text generation request to {self.provider} using model: {self.model}")
             
-            response_text = completion.choices[0].message.content.strip()
-            logger.info("Successfully received response from Groq.")
+            if self.provider == 'gemini':
+                genai_model = genai.GenerativeModel(
+                    model_name=self.model,
+                    system_instruction=system_instruction
+                )
+                
+                completion = genai_model.generate_content(
+                    user_prompt,
+                    generation_config=genai.GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=1800,
+                        response_mime_type="application/json"
+                    )
+                )
+                response_text = completion.text.strip()
+            else:
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=temperature,
+                    max_tokens=1800,
+                    response_format={"type": "json_object"}
+                )
+                response_text = completion.choices[0].message.content.strip()
+                
+            logger.info(f"Successfully received response from {self.provider}.")
             
             # Parse response
             parsed_data = self._clean_and_parse_json(response_text, product_name, product_description)
             return parsed_data
             
         except Exception as e:
-            logger.error(f"Error generating copy from Groq: {e}")
+            logger.error(f"Error generating copy from {self.provider}: {e}")
             # Fallback output in case of failure so downstream components don't crash
             desc_words = product_description.split() if product_description else ["Premium", "Quality", "Build"]
             desc_short = " ".join(desc_words[:3])

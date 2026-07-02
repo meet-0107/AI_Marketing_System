@@ -184,7 +184,7 @@ def generate_campaign_task(
         f"Crisp, clear, ultra-detailed shot with {light1}, realistic reflections, soft shadows, and clean luxury retail styling. "
         f"The product is fully and clearly visible, perfectly centered, showing its entire design. "
         f"High-end 8K digital studio photograph finish. "
-        "Important requirement: Clean pure photography only. No text, no words, no letters, no typography, no logos, no watermarks, no banners, no buttons."
+        f"Important requirement: The image must prominently feature bold, stylish typography seamlessly integrated into the scene displaying the exact text: '{product_name}'."
     )
     prompt_2 = (
         f"A professional premium lifestyle contextual photograph featuring the exact same {product_visual_desc} as the main central focus. "
@@ -194,7 +194,7 @@ def generate_campaign_task(
         f"Cinematic atmosphere with {light2}, beautiful bokeh, shallow depth of field, realistic textures and warm colors. "
         f"The product remains in sharp clear focus and fully visible in the center. "
         f"High-end 8K advertising photography finish. "
-        "Important requirement: Clean pure photography only. No text, no words, no letters, no typography, no logos, no watermarks, no banners, no buttons."
+        f"Important requirement: The image must prominently feature bold, stylish typography seamlessly integrated into the scene displaying the exact text: '{product_name}'."
     )
     
     image_data_uris = []

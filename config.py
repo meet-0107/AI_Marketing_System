@@ -14,6 +14,7 @@ CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
 IMAGE_API_KEY = os.getenv("CLOUDFLARE_API_TOKEN") or os.getenv("IMAGE_API_KEY") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Model Configuration
+TEXT_LLM_PROVIDER = os.getenv("TEXT_LLM_PROVIDER", "groq").lower()
 TEXT_MODEL = os.getenv("TEXT_MODEL_NAME")
 IMAGE_MODEL = os.getenv("MODEL") or os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "@cf/black-forest-labs/flux-1-schnell")
 IMAGE_PROVIDER = os.getenv("IMAGE_LLM_PROVIDER") or os.getenv("IMAGE_PROVIDER", "cloudflare")
