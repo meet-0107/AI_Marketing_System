@@ -59,5 +59,18 @@ async def get_task_status(task_id: str) -> Dict[str, Any]:
         response["result"] = task_result.result
     elif task_result.state == "FAILURE":
         response["error"] = str(task_result.info)
+    elif task_result.state == "PROGRESS":
+        info = task_result.info or {}
+        if isinstance(info, dict):
+            response["progress_step"] = info.get("step")
+            if "copy" in info:
+                response["result"] = {
+                    "product_name": info.get("product_name"),
+                    "tone": info.get("tone"),
+                    "copy": info["copy"],
+                    "asset_urls": []
+                }
+        else:
+            response["progress_step"] = str(info)
         
     return response

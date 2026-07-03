@@ -25,3 +25,5 @@ Thumbs.db
 *.svg
 week_1_multimodal_api/outputs/
 test_system.py
+saved_images/
+response_output.json

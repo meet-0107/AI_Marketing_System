@@ -20,6 +20,8 @@ class CampaignRequest(BaseModel):
     tone: str
     target_audience: Optional[str] = None
     image_prompt: Optional[str] = None
+    generate_text: bool = True
+    generate_images: bool = True
 
 class CampaignResponse(BaseModel):
     task_id: str
@@ -36,7 +38,9 @@ async def create_campaign(request: CampaignRequest):
         product_description=request.product_description,
         tone=request.tone,
         target_audience=request.target_audience,
-        image_prompt=request.image_prompt
+        image_prompt=request.image_prompt,
+        generate_text=request.generate_text,
+        generate_images=request.generate_images
     )
     
     return CampaignResponse(
@@ -60,6 +64,13 @@ async def get_task_status(task_id: str) -> Dict[str, Any]:
         info = task_result.info
         if isinstance(info, dict):
             response["progress_step"] = info.get("step", "Processing...")
+            if "copy" in info:
+                response["result"] = {
+                    "product_name": info.get("product_name"),
+                    "tone": info.get("tone"),
+                    "copy": info["copy"],
+                    "asset_urls": []
+                }
         else:
             response["progress_step"] = str(info)
     else:

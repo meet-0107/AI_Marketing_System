@@ -42,9 +42,12 @@ function App() {
         const data = await getCampaignStatus(activeTaskId);
         setStatus(data.status);
         setProgressStep(data.progress_step);
+        
+        if (data.result) {
+          setResult(data.result);
+        }
 
         if (data.status === 'SUCCESS') {
-          setResult(data.result);
           setIsGenerating(false);
           clearInterval(pollingIntervalRef.current);
         } else if (data.status === 'FAILURE') {

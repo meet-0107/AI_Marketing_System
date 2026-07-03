@@ -87,8 +87,8 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
     );
   }
 
-  // Polling / Progress State
-  if (status && status !== 'SUCCESS' && status !== 'FAILURE') {
+  // Polling / Progress State (Show loading screen ONLY if we don't have copy results yet)
+  if (status && status !== 'SUCCESS' && status !== 'FAILURE' && !(result && result.copy)) {
     const isCopyDone = progressStep && (progressStep.includes('images') || progressStep.includes('completed') || progressStep.includes('mock') || progressStep.includes('MOCK'));
     const isImagesActive = progressStep && (progressStep.includes('images') || progressStep.includes('mock') || progressStep.includes('MOCK'));
 
@@ -116,14 +116,12 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
             {progressStep.toUpperCase()}
           </div>
         )}
-
-
       </div>
     );
   }
 
-  // Success State
-  if (status === 'SUCCESS' && result) {
+  // Success / Partial Success (Early Copy) State
+  if ((status === 'SUCCESS' || (status && status !== 'FAILURE' && result && result.copy)) && result) {
     const copy = result.copy || {};
     const assetUrls = result.asset_urls || [];
     const tweets = copy.tweets || [];
@@ -585,14 +583,15 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         </div>
 
         {/* 2 AI Promotional Images Section */}
-        {assetUrls.length > 0 && (
+        {(assetUrls.length > 0 || status === 'PROGRESS') && (
           <div className="result-section">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--primary)' }}>
               <ImageIcon size={20} />
               2 AI Promotional Images
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-              {assetUrls.map((url, index) => {
+            {assetUrls.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+                {assetUrls.map((url, index) => {
                 const rawBanner = banners[index] || banners[0];
                 const banner = {
                   ...rawBanner,
@@ -667,7 +666,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
 
                       <div className="result-media" style={{ marginBottom: 0, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }}>
                         {/* Image Container with Elegant direct-overlay layout */}
-                        <div style={{ position: 'relative', width: '100%', display: 'block', backgroundColor: '#0f172a' }}>
+                        <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
                           
                           {/* Top Right Social Follow Widget */}
                           <div style={{ position: 'absolute', top: '1.25rem', right: '1.5rem', zIndex: 10, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -686,7 +685,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                           </div>
 
                           {/* Pristine Background Image */}
-                          <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }} />
+                          <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
 
                         {/* Direct Text Overlay Content (Slogan at top, features on left & right sides of centered product) */}
                         <div>
@@ -829,7 +828,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                     </div>
 
                     {/* Image Container with Direct Layout */}
-                    <div style={{ position: 'relative', width: '100%', display: 'block', backgroundColor: '#0f172a' }}>
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
                       {/* No dark vignette covering the image, ensuring product remains 100% bright and visible */}
 
                       {/* Top Left Discount Tag Based on Price - Swallowtail Red Ribbon Banner Design */}
@@ -906,12 +905,20 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                       </div>
 
                       {/* Pristine Background Image (Perfecty clean and visible without any overlays) */}
-                      <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'cover' }} />
+                      <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
                     </div>
                   </div>
                 );
               })}
             </div>
+            ) : (
+              <div style={{ padding: '3.5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-main)', gap: '1rem' }}>
+                <Loader2 className="animate-spin" size={32} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+                <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Generating premium advertising graphics... ({progressStep || 'Starting'})
+                </span>
+              </div>
+            )}
           </div>
         )}
 

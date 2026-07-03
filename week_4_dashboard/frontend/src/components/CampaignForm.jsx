@@ -7,6 +7,8 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
     tone: 'professional',
     target_audience: '',
     image_prompt: '',
+    generate_text: true,
+    generate_images: true,
   });
 
   const handleChange = (e) => {
@@ -16,6 +18,11 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Validate that at least one option is selected
+    if (!formData.generate_text && !formData.generate_images) {
+      alert('Please select at least one asset to generate (Copy or Images).');
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -55,6 +62,33 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
             onChange={handleChange}
             disabled={isGenerating}
           />
+        </div>
+
+        {/* Separated Generation Selection Controls */}
+        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.25rem', marginBottom: '1.5rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="generate_text"
+              checked={formData.generate_text}
+              disabled={isGenerating}
+              onChange={(e) => setFormData(prev => ({ ...prev, generate_text: e.target.checked }))}
+              style={{ width: '16px', height: '16px', borderRadius: '4px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+            />
+            Generate Copy
+          </label>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              name="generate_images"
+              checked={formData.generate_images}
+              disabled={isGenerating}
+              onChange={(e) => setFormData(prev => ({ ...prev, generate_images: e.target.checked }))}
+              style={{ width: '16px', height: '16px', borderRadius: '4px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+            />
+            Generate Images
+          </label>
         </div>
 
         <button type="submit" className="btn-primary" disabled={isGenerating}>

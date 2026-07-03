@@ -14,14 +14,35 @@ logger = logging.getLogger(__name__)
 text_client = TextClient()
 image_client = ImageClient()
 
-@celery_app.task(bind=True, name="generate_campaign_task")
+def slugify(text: str) -> str:
+    import re
+    text = text.lower()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_-]+", "-", text)
+    return text.strip("-")
+
+def save_image_to_disk(img_bytes: bytes, filename: str):
+    try:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        folder = os.path.join(project_root, "saved_images")
+        os.makedirs(folder, exist_ok=True)
+        filepath = os.path.join(folder, filename)
+        with open(filepath, "wb") as f:
+            f.write(img_bytes)
+        logger.info(f"Saved generated image copy to local file: {filepath}")
+    except Exception as e:
+        logger.error(f"Failed to save image copy to disk: {e}")
+
+@celery_app.task(bind=True, name="generate_campaign_task_v2")
 def generate_campaign_task(
     self,
     product_name: str,
     product_description: str = None,
     tone: str = "professional",
     target_audience: str = None,
-    image_prompt: str = None
+    image_prompt: str = None,
+    generate_text: bool = True,
+    generate_images: bool = True
 ) -> Dict[str, Any]:
     """
     Celery background task that generates a complete campaign package:
@@ -29,6 +50,7 @@ def generate_campaign_task(
     - 2 distinct AI promotional images via Google Gemini API (Imagen 3)
     """
     logger.info(f"[{self.request.id}] Starting asynchronous campaign generation for '{product_name}' (Tone: {tone})")
+    product_slug = slugify(product_name)
     
     if getattr(config, "MOCK_GENERATION", False):
         logger.info(f"[{self.request.id}] MOCK GENERATION ACTIVE. Bypassing external APIs.")
@@ -74,16 +96,23 @@ def generate_campaign_task(
             ]
         }
         
+        # Fetch mock/fallback images from local saved_images
         image_data_uris = []
         try:
-            import requests
             import base64
-            img_r = requests.get("https://images.unsplash.com/photo-1602143407151-01114192003f?auto=format&fit=crop&w=512&q=80", timeout=3)
-            if img_r.status_code == 200:
-                b64_img = base64.b64encode(img_r.content).decode("utf-8")
-                image_data_uris = [f"data:image/jpeg;base64,{b64_img}", f"data:image/jpeg;base64,{b64_img}"]
-        except Exception:
-            pass
+            # Attempt to find local fallback image
+            for idx in range(2):
+                img_bytes = image_client.generate_image(
+                    base_prompt="", 
+                    tone=tone, 
+                    product_name=product_name
+                )
+                if img_bytes:
+                    save_image_to_disk(img_bytes, f"{product_slug}_img{idx+1}_{self.request.id}.png")
+                    b64_img = base64.b64encode(img_bytes).decode("utf-8")
+                    image_data_uris.append(f"data:image/jpeg;base64,{b64_img}")
+        except Exception as e:
+            logger.error(f"Mock image generation failed: {e}")
             
         if not image_data_uris:
             tiny_grey_pixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -100,18 +129,38 @@ def generate_campaign_task(
         }
     
     # 1. Generate Structured Copy (Blog Post + 3 Tweets)
-    self.update_state(state="PROGRESS", meta={"step": "Generating structured marketing copy (Blog Post + 3 Tweets)..."})
-    logger.info(f"[{self.request.id}] Generating copy via TextClient...")
-    
-    copy_result = text_client.generate_copy(
-        product_name=product_name,
-        product_description=product_description,
-        tone=tone,
-        target_audience=target_audience
-    )
+    if generate_text:
+        self.update_state(state="PROGRESS", meta={"step": "Generating structured marketing copy..."})
+        logger.info(f"[{self.request.id}] Generating copy via TextClient...")
+        
+        copy_result = text_client.generate_copy(
+            product_name=product_name,
+            product_description=product_description,
+            tone=tone,
+            target_audience=target_audience
+        )
+    else:
+        logger.info(f"[{self.request.id}] Skipping copy generation as generate_text is set to False.")
+        copy_result = {
+            "product_description": product_description or f"Experience the excellence of {product_name}.",
+            "headline": f"Discover {product_name} today!",
+            "funny_slogan": "Premium and sleek lifestyle upgrades.",
+            "features": [],
+            "blog_post": "",
+            "tweets": [],
+            "image_banners": []
+        }
     
     # 2. Generate 2 AI Promotional Images
-    self.update_state(state="PROGRESS", meta={"step": "Generating 2 AI promotional images..."})
+    self.update_state(
+        state="PROGRESS", 
+        meta={
+            "step": "Generating 2 AI promotional images...",
+            "copy": copy_result,
+            "product_name": product_name,
+            "tone": tone
+        }
+    )
     logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
     # Diverse pools for Image 1 (Studio & Artistic Hero Shots)
@@ -177,47 +226,80 @@ def generate_campaign_task(
         f"and state-of-the-art professional industrial design details"
     )
 
+    avoid_list = (
+        "Avoid:\n"
+        "- blurry images\n"
+        "- cropped product\n"
+        "- duplicate objects\n"
+        "- distorted text\n"
+        "- watermark\n"
+        "- logos\n"
+        "- low resolution\n"
+        "- unrealistic reflections\n"
+        "- excessive saturation\n"
+        "- cluttered background\n"
+        "- people\n"
+        "- humans\n"
+        "- faces\n"
+        "- hands\n"
+        "- man\n"
+        "- woman\n"
+        "- text\n"
+        "- words\n"
+        "- typography\n"
+        "- letters"
+    )
+
     prompt_1 = (
         f"A professional commercial studio product photograph featuring {product_visual_desc} as the main central focus. "
-        f"The product must be positioned in the center and upper-middle of the frame, well above the bottom edge, leaving the bottom 30% of the frame as empty background space (copy space) for text overlays. "
+        f"The product must be positioned perfectly centered, occupying only the central 50% of the image width and upper-middle of the image height. "
+        f"Keep the left 25% and right 25% of the frame width completely clean and empty as clear background space (copy space) for overlay text columns. "
+        f"Keep the bottom 30% of the image height empty as clear copy space. "
         f"The product is placed {env1}. "
         f"Crisp, clear, ultra-detailed shot with {light1}, realistic reflections, soft shadows, and clean luxury retail styling. "
         f"The product is fully and clearly visible, perfectly centered, showing its entire design. "
-        f"High-end 8K digital studio photograph finish. "
-        f"Important requirement: The image must prominently feature bold, stylish typography seamlessly integrated into the scene displaying the exact text: '{product_name}'."
+        f"High-end 8K digital studio photograph finish.\n\n"
+        f"{avoid_list}"
     )
     prompt_2 = (
-        f"A professional premium lifestyle contextual photograph featuring the exact same {product_visual_desc} as the main central focus. "
-        f"The product must be positioned in the center and upper-middle of the frame, well above the bottom edge, leaving the bottom 30% of the frame as empty background space (copy space) for text overlays. "
-        f"The product is fully and clearly visible, placed or being used naturally {env2}. "
-        f"The scene shows {product_visual_desc} integrated seamlessly into the environment, emphasizing its design in everyday life. "
+        f"A professional premium lifestyle contextual photograph. "
+        f"{env2} "
+        f"The product must be positioned perfectly centered, occupying only the central 50% of the image width and upper-middle of the image height. "
+        f"Keep the left 25% and right 25% of the frame width completely clean and empty as clear background space (copy space) for overlay text columns. "
+        f"Keep the bottom 30% of the image height empty as clear copy space. "
+        f"The product is fully and clearly visible, showing {product_visual_desc} integrated into everyday life. "
         f"Cinematic atmosphere with {light2}, beautiful bokeh, shallow depth of field, realistic textures and warm colors. "
-        f"The product remains in sharp clear focus and fully visible in the center. "
-        f"High-end 8K advertising photography finish. "
-        f"Important requirement: The image must prominently feature bold, stylish typography seamlessly integrated into the scene displaying the exact text: '{product_name}'."
+        f"The product remains in sharp clear focus and fully visible. "
+        f"High-end 8K advertising photography finish.\n\n"
+        f"{avoid_list}"
     )
     
     image_data_uris = []
     
-    # Generate Image 1 independently without saving to disk
-    try:
-        logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
-        img1_bytes = image_client.generate_image(prompt_1, tone=tone, width=1024, height=1024)
-        import base64
-        b64_img1 = base64.b64encode(img1_bytes).decode("utf-8")
-        image_data_uris.append(f"data:image/jpeg;base64,{b64_img1}")
-    except Exception as e:
-        logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
-        
-    # Generate Image 2 independently without saving to disk
-    try:
-        logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
-        img2_bytes = image_client.generate_image(prompt_2, tone=tone, width=1024, height=1024)
-        import base64
-        b64_img2 = base64.b64encode(img2_bytes).decode("utf-8")
-        image_data_uris.append(f"data:image/jpeg;base64,{b64_img2}")
-    except Exception as e:
-        logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
+    if generate_images and getattr(config, "GENERATE_IMAGES", True):
+        # Generate Image 1 independently
+        try:
+            logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
+            img1_bytes = image_client.generate_image(prompt_1, tone=tone, width=1024, height=1024, product_name=product_name)
+            save_image_to_disk(img1_bytes, f"{product_slug}_img1_{self.request.id}.png")
+            import base64
+            b64_img1 = base64.b64encode(img1_bytes).decode("utf-8")
+            image_data_uris.append(f"data:image/jpeg;base64,{b64_img1}")
+        except Exception as e:
+            logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
+            
+        # Generate Image 2 independently
+        try:
+            logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
+            img2_bytes = image_client.generate_image(prompt_2, tone=tone, width=1024, height=1024, product_name=product_name)
+            save_image_to_disk(img2_bytes, f"{product_slug}_img2_{self.request.id}.png")
+            import base64
+            b64_img2 = base64.b64encode(img2_bytes).decode("utf-8")
+            image_data_uris.append(f"data:image/jpeg;base64,{b64_img2}")
+        except Exception as e:
+            logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
+    else:
+        logger.info(f"[{self.request.id}] Skipping image generation as GENERATE_IMAGES is set to False or generate_images flag is False.")
         
     logger.info(f"[{self.request.id}] Campaign generation completed successfully!")
     

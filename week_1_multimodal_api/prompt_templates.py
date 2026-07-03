@@ -61,7 +61,27 @@ def get_system_instruction(tone: str) -> str:
     """
     tone = tone.lower().strip()
     config = TONE_CONFIG.get(tone, TONE_CONFIG["professional"])
-    return config["text_system_instruction"]
+    
+    base_instruction = (
+        "You are a senior marketing strategist and professional advertising copywriter. "
+        "Your task is to create compelling, high-converting marketing content for any product provided by the user. "
+        "Guidelines:\n"
+        "- Adapt your writing to the product category automatically.\n"
+        "- Highlight real customer benefits instead of simply listing features.\n"
+        "- Write naturally and persuasively.\n"
+        "- Match the requested tone.\n"
+        "- Keep the language clear, engaging, and easy to read.\n"
+        "- Avoid generic AI phrases such as: 'Revolutionary', 'Cutting-edge', 'Game-changing', 'Next-generation', 'Unlock the future'.\n"
+        "- Do not make false or unverifiable claims.\n"
+        "- Do not mention competitors unless explicitly requested.\n"
+        "- Create unique content for every request.\n"
+        "- If product details are limited, make reasonable assumptions without inventing unrealistic features.\n"
+        "- Focus on value, quality, usability, and customer experience.\n"
+        "- Ensure the output is well-structured and suitable for marketing campaigns.\n\n"
+    )
+    
+    specific_tone_instruction = f"For this campaign, write in a {tone} tone. {config['text_system_instruction']}"
+    return base_instruction + specific_tone_instruction
 
 def get_style_modifier(tone: str) -> str:
     """
@@ -101,9 +121,10 @@ def format_copy_prompt(product_name: str, product_description: str, target_audie
         '  ],\n'
         '  "blog_post": "A complete, engaging blog post that MUST follow this exact Markdown template structure, filled with the product details:\\n\\n# {Product Name}: {Short Catchy Headline}\\n\\n## Introduction\\n\\nLooking for a **{product_category}** that combines **{benefit_1}**, **{benefit_2}**, and **{benefit_3}**? The **{Product Name}** is designed to deliver outstanding performance, premium quality, and exceptional value. Whether you\'re a **{target_audience}**, this product is built to meet your everyday needs.\\n\\n---\\n\\n## Key Features\\n\\n* **{Feature 1}** – {Short description}\\n* **{Feature 2}** – {Short description}\\n* **{Feature 3}** – {Short description}\\n* **{Feature 4}** – {Short description}\\n* **{Feature 5}** – {Short description}\\n\\n---\\n\\n## Why Choose {Product Name}?\\n\\nThe **{Product Name}** stands out with its combination of **{USP_1}**, **{USP_2}**, and **{USP_3}**. Designed using high-quality materials and modern technology, it offers reliability, durability, and a premium user experience.\\n\\n---\\n\\n## Benefits\\n\\n* Improves your daily experience\\n* Built with premium-quality materials\\n* Stylish and modern design\\n* Easy to use and maintain\\n* Excellent value for money\\n\\n---\\n\\n## Customer Experience\\n\\nCustomers appreciate the **{Product Name}** for its **{positive_point_1}**, **{positive_point_2}**, and **{positive_point_3}**. It consistently delivers reliable performance while maintaining a premium look and feel.\\n\\n---\\n\\n## Final Thoughts\\n\\nIf you\'re searching for a **{product_category}** that offers **quality, performance, and value**, the **{Product Name}** is an excellent choice. Experience the perfect combination of innovation, durability, and style.\\n\\n### Call to Action\\n\\n**Upgrade your experience today with the {Product Name}. Order now and enjoy premium quality like never before!**",\n'
         '  "tweets": [\n'
-        '    "Tweet 1: A punchy, attention-grabbing tweet highlighting a key benefit. Include 2-3 relevant hashtags.",\n'
-        '    "Tweet 2: An engaging question or problem-solution tweet with a strong hook. Include 2-3 relevant hashtags.",\n'
-        '    "Tweet 3: A direct call-to-action tweet emphasizing value and urgency. Include 2-3 relevant hashtags."\n'
+        '    "Generate three unique Twitter/X posts. Each tweet must have a different writing style and should not repeat the same wording or ideas.",\n'
+        '    "Variant 1 (Benefit Focus): Emphasize the product\'s biggest customer benefit with an engaging hook. Keep it under 280 characters. Include 1-2 emojis and 2-3 relevant hashtags.",\n'
+        '    "Variant 2 (Storytelling/Problem-Solution): Begin with a relatable problem, question, or short scenario, then present the product as the ideal solution. Keep it under 280 characters. Include 1-2 emojis and 2-3 relevant hashtags.",\n'
+        '    "Variant 3 (Promotional CTA): Create an exciting, action-oriented tweet that encourages users to buy, try, or learn more. Create a sense of urgency without sounding spammy. Keep it under 280 characters. Include 1-2 emojis and 2-3 relevant hashtags."\n'
         '  ],\n'
         '  "image_banners": [\n'
         '    {\n'

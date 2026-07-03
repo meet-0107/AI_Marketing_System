@@ -32,9 +32,20 @@ class TextClient:
         # Initialize client based on provider
         if self.provider == 'gemini':
             genai.configure(api_key=self.api_key)
-            if self.model and self.model.lower() == "gemini 1.5 flash":
-                self.model = "gemini-1.5-flash"
-            self.model = self.model or 'gemini-1.5-flash'
+            if self.model:
+                cleaned_model = self.model.lower().strip()
+                if "gemini-3.5-flash" in cleaned_model or "gemini 3.5 flash" in cleaned_model:
+                    self.model = "gemini-3.5-flash"
+                elif "gemini-2.5-flash" in cleaned_model or "gemini 2.5 flash" in cleaned_model:
+                    self.model = "gemini-2.5-flash"
+                elif "gemini-1.5-flash" in cleaned_model or "gemini 1.5 flash" in cleaned_model:
+                    self.model = "gemini-1.5-flash"
+                elif "gemini-1.5-pro" in cleaned_model or "gemini 1.5 pro" in cleaned_model:
+                    self.model = "gemini-1.5-pro"
+                else:
+                    self.model = cleaned_model.replace("models/", "")
+            else:
+                self.model = 'gemini-3.5-flash'
         else:
             self.client = Groq(api_key=self.api_key)
 
@@ -68,7 +79,7 @@ class TextClient:
                     user_prompt,
                     generation_config=genai.GenerationConfig(
                         temperature=temperature,
-                        max_output_tokens=1800,
+                        max_output_tokens=4096,
                         response_mime_type="application/json"
                     )
                 )
@@ -81,7 +92,7 @@ class TextClient:
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=temperature,
-                    max_tokens=1800,
+                    max_tokens=4096,
                     response_format={"type": "json_object"}
                 )
                 response_text = completion.choices[0].message.content.strip()
@@ -92,8 +103,46 @@ class TextClient:
             parsed_data = self._clean_and_parse_json(response_text, product_name, product_description)
             return parsed_data
             
-        except Exception as e:
-            logger.error(f"Error generating copy from {self.provider}: {e}")
+        except Exception as primary_err:
+            logger.warning(f"Primary text generation ({self.provider} / {self.model}) failed: {primary_err}")
+            
+            # Check for OpenRouter Fallback
+            if getattr(config, "OPENROUTER_API_KEY", None):
+                logger.info(f"Attempting fallback text generation via OpenRouter using model {config.OPENROUTER_MODEL}...")
+                try:
+                    import requests
+                    headers = {
+                        "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "http://localhost:5173",
+                        "X-Title": "AI Marketing System"
+                    }
+                    payload = {
+                        "model": config.OPENROUTER_MODEL,
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": temperature,
+                        "response_format": {"type": "json_object"}
+                    }
+                    response = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        json=payload,
+                        headers=headers,
+                        timeout=30
+                    )
+                    response.raise_for_status()
+                    res_data = response.json()
+                    response_text = res_data["choices"][0]["message"]["content"].strip()
+                    
+                    logger.info(f"Successfully received fallback response from OpenRouter using model: {config.OPENROUTER_MODEL}")
+                    parsed_data = self._clean_and_parse_json(response_text, product_name, product_description)
+                    return parsed_data
+                except Exception as openrouter_err:
+                    logger.error(f"Fallback text generation via OpenRouter also failed: {openrouter_err}")
+            
+            logger.error(f"Error generating copy from {self.provider}: {primary_err}")
             # Fallback output in case of failure so downstream components don't crash
             desc_words = product_description.split() if product_description else ["Premium", "Quality", "Build"]
             desc_short = " ".join(desc_words[:3])
