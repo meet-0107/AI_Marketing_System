@@ -77,3 +77,22 @@ flowchart TD
 
     WORKER -->|stores result| D
 ```
+
+---
+
+## 🛠️ Tools & Technology
+
+| Category | Tool / Technology | Purpose |
+|---|---|---|
+| **Backend Framework** | FastAPI | High-performance async REST API server |
+| **Task Queue** | Celery | Distributed background task processing |
+| **Message Broker** | Redis | Task queue broker + result storage |
+| **LLM (Primary)** | Groq API | Ultra-fast text generation |
+| **LLM (Alternative)** | Google Gemini API | Text generation (gemini-flash / pro) |
+| **LLM (Fallback)** | OpenRouter API | Unified gateway to 100+ AI models |
+| **Image Gen (Primary)** | Cloudflare Workers AI | FLUX / Stable Diffusion image generation |
+| **Image Gen (Fallback)** | Hugging Face Inference API | Text-to-image & image-to-image generation |
+| **Frontend** | React + Vite | Interactive campaign dashboard UI |
+| **Config Management** | python-dotenv | Environment variable loading from `.env` |
+| **Data Validation** | Pydantic | Request/response schema validation |
+| **Language** | Python 3.x | Backend logic and API clients |
