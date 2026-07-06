@@ -1,1 +1,79 @@
+# AI Marketing System
+
 The ai_marketing_system is a multi-modal AI content generation engine designed to streamline digital marketing workflows by processing a single product brief to simultaneously generate platform-optimized copywriting, SEO metadata, and complementary visual assets. Under the hood, it leverages a decoupled, highly scalable architecture combining a modern React frontend with a high-performance Python FastAPI backend. To ensure a seamless user experience without server timeouts, long-running AI API calls are intelligently offloaded to an asynchronous Celery and Redis task queue. Ultimately, this tool acts as a digital force multiplier, drastically reducing campaign creation time while maintaining consistent, multi-platform brand messaging.
+
+---
+
+## 📁 File System Diagram
+
+```
+AI_Marketing_System/
+│
+├── .env
+├── .gitignore
+├── config.py
+├── requirements.txt
+├── start_all.py
+├── test_system.py
+├── response_output.json
+├── README.md
+├── saved_images/
+│
+├── week_1_multimodal_api/               ← Multimodal API Integration Layer
+│   ├── __init__.py
+│   ├── prompt_templates.py
+│   ├── text_client.py
+│   └── image_client.py
+│
+├── week_2_async_queue/                  ← Async Task Queue (FastAPI + Celery + Redis)
+│   ├── __init__.py
+│   ├── celery_app.py
+│   ├── tasks.py
+│   ├── main.py
+│   └── worker.py
+│
+├── week_3_parallel_execution/           ← Parallel Execution (upcoming)
+│
+└── week_4_dashboard/                    ← React Frontend Dashboard (upcoming)
+```
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    A([👤 User / Frontend<br/>React App]) -->|POST /campaign| B
+
+    subgraph API ["⚡ FastAPI  —  main.py"]
+        B[POST /campaign<br/>Returns task_id instantly]
+        C[GET /status/task_id<br/>Returns progress & result]
+    end
+
+    B -->|task.delay| D[(🔴 Redis<br/>Message Broker +<br/>Result Backend)]
+    D -->|poll result| C
+    C --> A
+
+    D -->|picks up task| E
+
+    subgraph WORKER ["⚙️ Celery Worker  —  tasks.py"]
+        E[generate_campaign_task]
+        E --> F[Phase 1: TextClient]
+        E --> G[Phase 2: ImageClient]
+    end
+
+    subgraph TEXT ["✍️ Text Generation"]
+        F --> T1[Groq API<br/>primary]
+        F --> T2[Gemini API<br/>fallback 1]
+        F --> T3[OpenRouter<br/>fallback 2]
+    end
+
+    subgraph IMAGE ["🖼️ Image Generation"]
+        G --> I1[Cloudflare Workers AI<br/>primary]
+        G --> I2[Hugging Face API<br/>fallback 1]
+        G --> I3[Local saved_images/<br/>fallback 2]
+        G --> I4[Unsplash / Picsum<br/>fallback 3]
+    end
+
+    WORKER -->|stores result| D
+```
