@@ -42,7 +42,7 @@ AI_Marketing_System/
 ## 📅 Week 1 — Foundation & API Integration
 
 During Week 1, our main goal was to lay a strong foundation.
-* Established the backend infrastructure, secured our API keys, and initialized the Redis database.
+* Established the backend infrastructure, secured our API keys.
 * Developed the Python services needed to connect with external AI text and image generation models.
 * Refined prompt instructions to ensure the generated visual assets match the tone of the marketing copy.
 
@@ -51,11 +51,15 @@ During Week 1, our main goal was to lay a strong foundation.
 ## 📅 Week 2 — Async Queue & Stability
 
 During Week 2, our focus shifted to making the system smooth and crash-proof.
-* Set up Redis and a background worker to help the system run smoothly and handle more work.
+* Set up Redis and a celery worker to help the system run smoothly and handle more work.
 * Updated the system to instantly give a ticket number while heavy AI tasks run in the background.
 * Added a new feature to easily check the ticket status to see when the work is finished.
 
+### ❓ Why Redis and Celery?
+Redis safely holds tasks and finished work, while Celery handles the heavy lifting in the background to keep your app running smoothly.
+
 ---
+
 
 ## 🏗️ System Architecture
 
@@ -114,4 +118,4 @@ flowchart TD
 | **Frontend** | React + Vite | Interactive campaign dashboard UI |
 | **Config Management** | python-dotenv | Environment variable loading from `.env` |
 | **Data Validation** | Pydantic | Request/response schema validation |
-| **Language** | Python 3.x | Backend logic and API clients |
+| **Language** | Python 3.x | Backend logic and API clients |
