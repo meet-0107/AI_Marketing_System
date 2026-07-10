@@ -1,5 +1,6 @@
 import React from 'react';
-import { Loader2, AlertCircle, Megaphone, Twitter, FileText, Image as ImageIcon, Sparkles, Tag, Award, Zap, ShieldCheck, TrendingUp, Star, CheckCircle, ArrowRight, Clock, Facebook, Instagram, ThumbsUp } from 'lucide-react';
+import { Loader2, AlertCircle, Megaphone, Twitter, FileText, Image as ImageIcon, Sparkles, Tag, Award, Zap, ShieldCheck, TrendingUp, Star, CheckCircle, ArrowRight, Clock, Facebook, Instagram, ThumbsUp, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 const parseBoldText = (text) => {
   if (!text) return '';
@@ -528,6 +529,278 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       }
     ];
 
+    const exportToPDF = () => {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Color scheme matching deep luxury aesthetics
+      const primaryColor = [30, 27, 75]; // Indigo 900
+      const secondaryColor = [79, 70, 229]; // Indigo 600
+      const textColor = [15, 23, 42]; // Slate 900
+      const mutedTextColor = [100, 116, 139]; // Slate 500
+      const lightBgColor = [248, 250, 252]; // Slate 50
+
+      let yPos = 25;
+      const margin = 20;
+      const contentWidth = 170; // 210 - 20 * 2
+      const pageHeight = 297;
+
+      const drawHeaderFooter = (pageNumber) => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
+        doc.text("AI Marketing Campaign System", margin, pageHeight - 10);
+        doc.text(`Page ${pageNumber}`, margin + contentWidth - 15, pageHeight - 10);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, pageHeight - 14, margin + contentWidth, pageHeight - 14);
+      };
+
+      const checkPageBreak = (neededHeight) => {
+        if (yPos + neededHeight > 265) {
+          doc.addPage();
+          drawHeaderFooter(doc.internal.getNumberOfPages());
+          yPos = 25;
+          return true;
+        }
+        return false;
+      };
+
+      // Page 1
+      drawHeaderFooter(1);
+
+      // Main Campaign Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      
+      const titleLines = doc.splitTextToSize(result.product_name.toUpperCase(), contentWidth);
+      doc.text(titleLines, margin, yPos);
+      yPos += titleLines.length * 8 + 4;
+
+      // Campaign Tagline
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(13);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text(`"${copy.headline || 'Premium Marketing Campaign'}"`, margin, yPos);
+      yPos += 10;
+
+      // Tone & Target Audience info
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
+      doc.text(`Campaign Tone: ${result.tone.charAt(0).toUpperCase() + result.tone.slice(1)}   |   Target Audience: ${result.target_audience || 'General B2C'}`, margin, yPos);
+      yPos += 5;
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, yPos, margin + contentWidth, yPos);
+      yPos += 12;
+
+      // Product Description block
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("Campaign Description", margin, yPos);
+      yPos += 6;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      const descLines = doc.splitTextToSize(result.product_description || '', contentWidth);
+      doc.text(descLines, margin, yPos);
+      yPos += descLines.length * 5.5 + 10;
+
+      // Blog Post
+      checkPageBreak(30);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("Official Campaign Blog Post", margin, yPos);
+      yPos += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+      const rawBlog = copy.blog_post || '';
+      const paragraphs = rawBlog.split('\n');
+
+      paragraphs.forEach((para) => {
+        const cleanPara = para.trim();
+        if (!cleanPara) return;
+
+        if (cleanPara.startsWith('# ')) {
+          checkPageBreak(15);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+          const headerVal = cleanPara.replace('# ', '').replace(/\*\*/g, '');
+          const lines = doc.splitTextToSize(headerVal, contentWidth);
+          doc.text(lines, margin, yPos);
+          yPos += lines.length * 6 + 4;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        } else if (cleanPara.startsWith('## ') || cleanPara.startsWith('### ')) {
+          checkPageBreak(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          const headerVal = cleanPara.replace(/^(##|###)\s+/, '').replace(/\*\*/g, '');
+          const lines = doc.splitTextToSize(headerVal, contentWidth);
+          doc.text(lines, margin, yPos);
+          yPos += lines.length * 5.5 + 3;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        } else if (cleanPara.startsWith('* ') || cleanPara.startsWith('- ')) {
+          checkPageBreak(8);
+          const bulletVal = cleanPara.substring(2).replace(/\*\*/g, '');
+          const lines = doc.splitTextToSize(`•  ${bulletVal}`, contentWidth - 4);
+          doc.text(lines, margin + 4, yPos);
+          yPos += lines.length * 5 + 2;
+        } else if (cleanPara === '---' || cleanPara === '***') {
+          checkPageBreak(6);
+          doc.setDrawColor(241, 245, 249);
+          doc.line(margin, yPos, margin + contentWidth, yPos);
+          yPos += 6;
+        } else {
+          const lines = doc.splitTextToSize(cleanPara.replace(/\*\*/g, ''), contentWidth);
+          checkPageBreak(lines.length * 5 + 4);
+          doc.text(lines, margin, yPos);
+          yPos += lines.length * 5 + 3;
+        }
+      });
+      yPos += 8;
+
+      // Tweets
+      checkPageBreak(40);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text("Promotional Social Media Tweets", margin, yPos);
+      yPos += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+
+      const tweetsList = copy.tweets || [];
+      tweetsList.forEach((tweet, index) => {
+        const prodNameClean = (result.product_name || 'Brand').split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+        const cleanedTweet = tweet.includes('#') 
+          ? tweet 
+          : `${tweet} #${prodNameClean} #Innovation`;
+        
+        const lines = doc.splitTextToSize(cleanedTweet, contentWidth - 10);
+        const blockHeight = lines.length * 5 + 10;
+        
+        checkPageBreak(blockHeight);
+        
+        doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
+        doc.rect(margin, yPos - 4, contentWidth, blockHeight - 2, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(margin, yPos - 4, contentWidth, blockHeight - 2, 'S');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.text(`Variant ${index + 1}:`, margin + 5, yPos + 1);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+        doc.text(lines, margin + 5, yPos + 7);
+        yPos += blockHeight + 4;
+      });
+      yPos += 6;
+
+      // SEO Tags
+      if (copy.seo_tags && copy.seo_tags.length > 0) {
+        checkPageBreak(30);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text("SEO Optimization Tags", margin, yPos);
+        yPos += 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+
+        const tagsString = copy.seo_tags.map(tag => `#${tag}`).join('    ');
+        const tagLines = doc.splitTextToSize(tagsString, contentWidth);
+        doc.text(tagLines, margin, yPos);
+        yPos += tagLines.length * 5.5 + 12;
+      }
+
+      // Images Page
+      if (assetUrls && assetUrls.length > 0) {
+        doc.addPage();
+        drawHeaderFooter(doc.internal.getNumberOfPages());
+        yPos = 25;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text("Promotional AI-Generated Graphics", margin, yPos);
+        yPos += 10;
+
+        assetUrls.forEach((url, index) => {
+          checkPageBreak(95);
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10.5);
+          doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+          doc.text(`Promotional Graphic #${index + 1}`, margin, yPos);
+          yPos += 6;
+
+          try {
+            const format = url.includes('png') ? 'PNG' : 'JPEG';
+            doc.addImage(url, format, margin, yPos, 80, 80);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9.5);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            const bannerInfo = banners[index] || {};
+            const textX = margin + 85;
+            let textY = yPos + 10;
+            
+            doc.text("Banner Overlay Copy:", textX, textY);
+            textY += 6;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+            
+            doc.text(`Badge: ${bannerInfo.badge || '✨ EXCLUSIVE'}`, textX, textY);
+            textY += 5;
+            doc.text(`Title: ${bannerInfo.title || 'PREMIUM'}`, textX, textY);
+            textY += 5;
+            doc.text(`Feature 1: ${bannerInfo.bullet1 || ''}`, textX, textY);
+            textY += 5;
+            doc.text(`Feature 2: ${bannerInfo.bullet2 || ''}`, textX, textY);
+            textY += 5;
+            doc.text(`Tag: ${bannerInfo.extra_tag || ''}`, textX, textY);
+            textY += 6;
+            
+            doc.setFont('helvetica', 'italic');
+            const supportingMessageLines = doc.splitTextToSize(bannerInfo.supporting_message || '', contentWidth - 85);
+            doc.text(supportingMessageLines, textX, textY);
+            
+          } catch (imgError) {
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9.5);
+            doc.setTextColor(239, 68, 68);
+            doc.text(`[Unable to embed image: ${imgError.message}]`, margin, yPos + 10);
+          }
+          yPos += 88;
+        });
+      }
+
+      const slug = result.product_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      doc.save(`campaign-${slug}.pdf`);
+    };
+
     return (
       <div className="premium-panel result-card" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
         {/* Warnings Banner */}
@@ -555,8 +828,30 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         )}
 
         {/* Header */}
-        <div className="result-header" style={{ marginBottom: 0 }}>
-          <h2 className="result-title">{copy.headline || 'Your Marketing Campaign Package'}</h2>
+        <div className="result-header" style={{ marginBottom: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 className="result-title" style={{ margin: 0 }}>{copy.headline || 'Your Marketing Campaign Package'}</h2>
+          <button 
+            onClick={exportToPDF}
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              padding: '0.6rem 1.25rem', 
+              background: 'var(--primary)', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: 'var(--radius-md)', 
+              fontWeight: 600, 
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)',
+              fontSize: '0.9rem',
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-dark)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
+          >
+            <Download size={16} /> Export Campaign PDF
+          </button>
         </div>
 
         {/* Blog Post Section */}
