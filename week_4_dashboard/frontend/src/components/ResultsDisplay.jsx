@@ -530,6 +530,30 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
 
     return (
       <div className="premium-panel result-card" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        {/* Warnings Banner */}
+        {result.warnings && result.warnings.length > 0 && (
+          <div style={{
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid #f59e0b',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.25rem',
+            color: '#d97706',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+            fontSize: '0.92rem',
+            lineHeight: '1.4'
+          }}>
+            <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Configuration Notice</strong>
+              {result.warnings.map((warning, idx) => (
+                <p key={idx} style={{ margin: 0 }}>{warning}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="result-header" style={{ marginBottom: 0 }}>
           <h2 className="result-title">{copy.headline || 'Your Marketing Campaign Package'}</h2>

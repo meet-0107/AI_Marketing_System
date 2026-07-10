@@ -37,7 +37,9 @@ class ImageClient:
         tone: str, 
         width: int = 1024, 
         height: int = 1024,
-        product_name: str = None
+        product_name: str = None,
+        image_reference: str = None,
+        warnings: list = None
     ) -> bytes:
         """
         Generates an ultra-premium commercial image aligned with a specified marketing tone.
@@ -45,7 +47,123 @@ class ImageClient:
         """
         full_prompt = format_image_prompt(base_prompt, tone)
         logger.info(f"Generated engineered image prompt: '{full_prompt}'")
-        
+
+        # ---------------------------------------------------------------------
+        # Layer -1: Hugging Face API Image-to-Image / Context-to-Image
+        # ---------------------------------------------------------------------
+        if image_reference:
+            hf_key = getattr(config, "HUGGINGFACE_API_KEY", None) or self.api_token
+            if not hf_key:
+                logger.error("Hugging Face API key is not configured in environment/config for Image-to-Image reference.")
+                if warnings is not None:
+                    warnings.append("Hugging Face API key (HUGGINGFACE_API_KEY) is missing in .env. Falling back to text-to-image.")
+            else:
+                model_name = self.model or "mit-han-lab/svdq-fp4-flux.1-fill-dev"
+                url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
+                headers = {
+                    "Authorization": f"Bearer {hf_key}",
+                    "Content-Type": "application/json",
+                    "x-use-cache": "0"
+                }
+                
+                # Clean up base64 string if it contains data URI prefix
+                base64_data = image_reference
+                if base64_data.startswith("data:"):
+                    parts = base64_data.split(",", 1)
+                    if len(parts) > 1:
+                        base64_data = parts[1]
+                
+                payload = {
+                    "inputs": base64_data,
+                    "parameters": {
+                        "prompt": full_prompt,
+                        "guidance_scale": 3.5
+                    }
+                }
+                
+                logger.info(f"Using Hugging Face Image-to-Image with model: {model_name}")
+                try:
+                    response = requests.post(url, headers=headers, json=payload, timeout=45)
+                    if response.status_code == 200:
+                        logger.info(f"✅ Successfully generated Image-to-Image from Hugging Face {model_name}.")
+                        return response.content
+                    else:
+                        err_msg = f"Hugging Face Image-to-Image failed (Status {response.status_code}): {response.text}"
+                        logger.warning(err_msg + ". Falling back to Cloudflare Image-to-Image.")
+                        if warnings is not None:
+                            # Extract clean error message from JSON if possible
+                            try:
+                                json_data = response.json()
+                                clean_err = json_data.get("error", response.text)
+                            except Exception:
+                                clean_err = response.text
+                            warnings.append(f"Hugging Face Kontext API error: {clean_err} (Fell back to Cloudflare Image-to-Image)")
+                except Exception as e:
+                    err_msg = f"Exception calling Hugging Face Kontext API: {e}"
+                    logger.warning(err_msg + ". Falling back to Cloudflare Image-to-Image.")
+                    if warnings is not None:
+                        warnings.append(f"Hugging Face connection error: {e} (Fell back to Cloudflare Image-to-Image)")
+
+        # ---------------------------------------------------------------------
+        # Fallback Layer: Cloudflare Workers AI Image-to-Image (if HF fails but image_reference is provided)
+        # ---------------------------------------------------------------------
+        if image_reference:
+            cf_token = self.api_token or config.CLOUDFLARE_API_TOKEN
+            cf_account = self.account_id or config.CLOUDFLARE_ACCOUNT_ID
+            if cf_token and cf_account:
+                url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account}/ai/run/@cf/runwayml/stable-diffusion-v1-5-img2img"
+                headers = {"Authorization": f"Bearer {cf_token}"}
+                
+                base64_data = image_reference
+                if base64_data.startswith("data:"):
+                    parts = base64_data.split(",", 1)
+                    if len(parts) > 1:
+                        base64_data = parts[1]
+                
+                payload = {
+                    "prompt": full_prompt,
+                    "image_b64": base64_data,
+                    "strength": 0.6
+                }
+                
+                logger.info("Attempting free Cloudflare AI Image-to-Image fallback (@cf/runwayml/stable-diffusion-v1-5-img2img)...")
+                try:
+                    response = requests.post(url, headers=headers, json=payload, timeout=25)
+                    if response.status_code == 200:
+                        logger.info("✅ Successfully generated Image-to-Image from free Cloudflare AI fallback.")
+                        return response.content
+                    else:
+                        err_msg = f"Cloudflare AI Image-to-Image fallback failed with status {response.status_code}: {response.text}"
+                        logger.warning(err_msg)
+                        if warnings is not None:
+                            warnings.append("Cloudflare image-to-image fallback failed. Falling back to pure text-to-image.")
+                except Exception as e:
+                    logger.warning(f"Exception calling Cloudflare AI Image-to-Image fallback: {e}")
+                    if warnings is not None:
+                        warnings.append(f"Cloudflare fallback connection error: {e}")
+
+        # ---------------------------------------------------------------------
+        # Layer 0: Hugging Face API (if provider is set to huggingface)
+        # ---------------------------------------------------------------------
+        provider = getattr(config, "IMAGE_PROVIDER", "cloudflare").lower()
+        if provider == "huggingface":
+            logger.info(f"Using Hugging Face provider for image generation with model: {self.model}")
+            hf_key = getattr(config, "HUGGINGFACE_API_KEY", None) or self.api_token
+            if not hf_key:
+                logger.error("Hugging Face API key is not configured in environment/config.")
+            else:
+                url = f"https://api-inference.huggingface.co/models/{self.model}"
+                headers = {"Authorization": f"Bearer {hf_key}"}
+                try:
+                    response = requests.post(url, headers=headers, json={"inputs": full_prompt}, timeout=30)
+                    if response.status_code == 200:
+                        logger.info("✅ Successfully generated image from Hugging Face in-memory.")
+                        return response.content
+                    else:
+                        logger.warning(f"Hugging Face generation failed with status {response.status_code}: {response.text}")
+                except Exception as e:
+                    logger.warning(f"Exception calling Hugging Face Inference API: {e}")
+
         # ---------------------------------------------------------------------
         # Layer 1: Cloudflare AI API (Primary preference with Multi-Account Fallback)
         # ---------------------------------------------------------------------

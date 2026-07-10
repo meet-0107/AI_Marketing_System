@@ -14,12 +14,18 @@ CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
 CLOUDFLARE_API_TOKEN_2 = os.getenv("CLOUDFLARE_API_TOKEN_2")
 CLOUDFLARE_ACCOUNT_ID_2 = os.getenv("CLOUDFLARE_ACCOUNT_ID_2")
 IMAGE_API_KEY = os.getenv("CLOUDFLARE_API_TOKEN") or os.getenv("IMAGE_API_KEY") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HUGGINGFACEHUB_API_TOKEN") or os.getenv("IMAGE_API_KEY")
 
 # Model Configuration
 TEXT_LLM_PROVIDER = os.getenv("TEXT_LLM_PROVIDER", "groq").lower()
 TEXT_MODEL = os.getenv("TEXT_MODEL_NAME")
-IMAGE_MODEL = os.getenv("MODEL") or os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "@cf/black-forest-labs/flux-1-schnell")
-IMAGE_PROVIDER = os.getenv("IMAGE_LLM_PROVIDER") or os.getenv("IMAGE_PROVIDER", "cloudflare")
+IMAGE_PROVIDER = (os.getenv("IMAGE_LLM_PROVIDER") or os.getenv("IMAGE_PROVIDER", "cloudflare")).lower()
+
+if IMAGE_PROVIDER == "huggingface":
+    IMAGE_MODEL = os.getenv("IMAGE_MODEL_NAME") or os.getenv("IMAGE_MODEL") or "krea/Krea-2-Raw"
+else:
+    IMAGE_MODEL = os.getenv("MODEL") or os.getenv("IMAGE_MODEL") or os.getenv("IMAGE_MODEL_NAME", "@cf/black-forest-labs/flux-1-schnell")
+
 IMAGE_API_URL = os.getenv("IMAGE_API_URL")
 GENERATE_IMAGES = os.getenv("GENERATE_IMAGES", "true").lower() == "true"
 MOCK_GENERATION = os.getenv("MOCK_GENERATION", "false").lower() == "true"

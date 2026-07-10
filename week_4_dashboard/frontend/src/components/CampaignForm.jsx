@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Sparkles, Upload } from 'lucide-react';
 
 export default function CampaignForm({ onSubmit, isGenerating }) {
   const [formData, setFormData] = useState({
@@ -35,7 +35,7 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label className="form-label" htmlFor="product_name">Product Name *</label>
+          <label className="form-label" htmlFor="product_name">New Product Launch *</label>
           <input
             id="product_name"
             name="product_name"
@@ -64,6 +64,8 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
           />
         </div>
 
+
+
         {/* Separated Generation Selection Controls */}
         <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.25rem', marginBottom: '1.5rem' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
@@ -77,7 +79,7 @@ export default function CampaignForm({ onSubmit, isGenerating }) {
             />
             Generate Copy
           </label>
-          
+
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', cursor: 'pointer' }}>
             <input
               type="checkbox"

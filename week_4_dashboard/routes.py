@@ -20,6 +20,7 @@ class CampaignRequest(BaseModel):
     tone: str
     target_audience: Optional[str] = None
     image_prompt: Optional[str] = None
+    image_reference: Optional[str] = None
     generate_text: bool = True
     generate_images: bool = True
 
@@ -39,6 +40,7 @@ async def create_campaign(request: CampaignRequest):
         tone=request.tone,
         target_audience=request.target_audience,
         image_prompt=request.image_prompt,
+        image_reference=request.image_reference,
         generate_text=request.generate_text,
         generate_images=request.generate_images
     )

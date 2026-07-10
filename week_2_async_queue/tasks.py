@@ -41,6 +41,7 @@ def generate_campaign_task(
     tone: str = "professional",
     target_audience: str = None,
     image_prompt: str = None,
+    image_reference: str = None,
     generate_text: bool = True,
     generate_images: bool = True
 ) -> Dict[str, Any]:
@@ -105,7 +106,8 @@ def generate_campaign_task(
                 img_bytes = image_client.generate_image(
                     base_prompt="", 
                     tone=tone, 
-                    product_name=product_name
+                    product_name=product_name,
+                    image_reference=image_reference
                 )
                 if img_bytes:
                     save_image_to_disk(img_bytes, f"{product_slug}_img{idx+1}_{self.request.id}.png")
@@ -274,34 +276,40 @@ def generate_campaign_task(
         f"{avoid_list}"
     )
     
+    warnings = []
     image_data_uris = []
     
     if generate_images and getattr(config, "GENERATE_IMAGES", True):
         # Generate Image 1 independently
         try:
             logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
-            img1_bytes = image_client.generate_image(prompt_1, tone=tone, width=1024, height=1024, product_name=product_name)
+            img1_bytes = image_client.generate_image(prompt_1, tone=tone, width=1024, height=1024, product_name=product_name, image_reference=image_reference, warnings=warnings)
             save_image_to_disk(img1_bytes, f"{product_slug}_img1_{self.request.id}.png")
             import base64
             b64_img1 = base64.b64encode(img1_bytes).decode("utf-8")
             image_data_uris.append(f"data:image/jpeg;base64,{b64_img1}")
         except Exception as e:
             logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
+            warnings.append(f"Image 1 generation pipeline error: {e}")
             
         # Generate Image 2 independently
         try:
             logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
-            img2_bytes = image_client.generate_image(prompt_2, tone=tone, width=1024, height=1024, product_name=product_name)
+            img2_bytes = image_client.generate_image(prompt_2, tone=tone, width=1024, height=1024, product_name=product_name, image_reference=image_reference, warnings=warnings)
             save_image_to_disk(img2_bytes, f"{product_slug}_img2_{self.request.id}.png")
             import base64
             b64_img2 = base64.b64encode(img2_bytes).decode("utf-8")
             image_data_uris.append(f"data:image/jpeg;base64,{b64_img2}")
         except Exception as e:
             logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
+            warnings.append(f"Image 2 generation pipeline error: {e}")
     else:
         logger.info(f"[{self.request.id}] Skipping image generation as GENERATE_IMAGES is set to False or generate_images flag is False.")
         
     logger.info(f"[{self.request.id}] Campaign generation completed successfully!")
+    
+    # Remove duplicate warning items to keep output clean
+    clean_warnings = list(dict.fromkeys(warnings))
     
     return {
         "task_id": self.request.id,
@@ -310,5 +318,6 @@ def generate_campaign_task(
         "tone": tone,
         "copy": copy_result,
         "image_data_uris": image_data_uris,
+        "warnings": clean_warnings,
         "status": "SUCCESS"
     }
