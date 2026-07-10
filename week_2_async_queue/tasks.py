@@ -104,24 +104,61 @@ def generate_campaign_task(
             ]
         }
         
-        # Fetch mock/fallback images from local saved_images
+        # Fetch mock/fallback images from local saved_images directly without calling external APIs
         image_data_uris = []
         try:
             import base64
-            # Attempt to find local fallback image
-            for idx in range(2):
-                img_bytes = image_client.generate_image(
-                    base_prompt="", 
-                    tone=tone, 
-                    product_name=product_name,
-                    image_reference=image_reference
-                )
-                if img_bytes:
-                    save_image_to_disk(img_bytes, f"{product_slug}_img{idx+1}_{self.request.id}.png")
-                    b64_img = base64.b64encode(img_bytes).decode("utf-8")
-                    image_data_uris.append(f"data:image/jpeg;base64,{b64_img}")
+            import re
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            folder = os.path.join(project_root, "saved_images")
+            
+            local_img_bytes_list = []
+            if os.path.exists(folder) and os.path.isdir(folder):
+                files = [f for f in os.listdir(folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                if files:
+                    target = product_name or ""
+                    keywords = [kw.lower() for kw in re.findall(r'[a-zA-Z0-9]+', target) if len(kw) >= 3]
+                    if not keywords:
+                        keywords = [kw.lower() for kw in re.findall(r'[a-zA-Z0-9]+', target)]
+                    
+                    candidates = []
+                    for f in files:
+                        f_lower = f.lower()
+                        match_count = sum(1 for kw in keywords if kw in f_lower)
+                        if match_count > 0:
+                            candidates.append((f, match_count))
+                    
+                    if candidates:
+                        candidates.sort(key=lambda x: x[1], reverse=True)
+                        best_match_count = candidates[0][1]
+                        best_candidates = [c[0] for c in candidates if c[1] == best_match_count]
+                        # Try to pick 2 distinct images if available
+                        chosen_files = random.sample(best_candidates, min(2, len(best_candidates)))
+                        if len(chosen_files) < 2 and len(files) >= 2:
+                            # Fill up with random images
+                            other_files = [f for f in files if f not in chosen_files]
+                            chosen_files.extend(random.sample(other_files, 2 - len(chosen_files)))
+                        
+                        for chosen_file in chosen_files:
+                            filepath = os.path.join(folder, chosen_file)
+                            try:
+                                with open(filepath, "rb") as fh:
+                                    local_img_bytes_list.append(fh.read())
+                            except Exception as fh_err:
+                                logger.warning(f"Failed to read mock file {filepath}: {fh_err}")
+            
+            # If no local images found or failed, generate a tiny transparent fallback pixel
+            if not local_img_bytes_list:
+                tiny_pixel = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
+                local_img_bytes_list = [tiny_pixel, tiny_pixel]
+            
+            for idx, img_bytes in enumerate(local_img_bytes_list[:2]):
+                save_image_to_disk(img_bytes, f"{product_slug}_img{idx+1}_{self.request.id}.png")
+                b64_img = base64.b64encode(img_bytes).decode("utf-8")
+                image_data_uris.append(f"data:image/jpeg;base64,{b64_img}")
+                
         except Exception as e:
-            logger.error(f"Mock image generation failed: {e}")
+            logger.error(f"Mock image load failed: {e}")
             
         if not image_data_uris:
             tiny_grey_pixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
