@@ -828,38 +828,40 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         )}
 
         {/* Header */}
-        <div className="result-header" style={{ marginBottom: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <h2 className="result-title" style={{ margin: 0 }}>{copy.headline || 'Your Marketing Campaign Package'}</h2>
-          <button 
-            onClick={exportToPDF}
-            style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              padding: '0.6rem 1.25rem', 
-              background: 'var(--primary)', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: 'var(--radius-md)', 
-              fontWeight: 600, 
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)',
-              fontSize: '0.9rem',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-dark)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
-          >
-            <Download size={16} /> Export Campaign PDF
-          </button>
+        <div className="result-header" style={{ marginBottom: 0 }}>
+          <h2 className="result-title">{copy.headline || 'Your Marketing Campaign Package'}</h2>
         </div>
 
         {/* Blog Post Section */}
         <div className="result-section">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent)' }}>
-            <FileText size={20} />
-            Official Blog Post
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--accent)' }}>
+              <FileText size={20} />
+              Official Blog Post
+            </h3>
+            <button 
+              onClick={exportToPDF}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                padding: '0.5rem 1rem', 
+                background: 'var(--primary)', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: 'var(--radius-md)', 
+                fontWeight: 600, 
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-sm)',
+                fontSize: '0.85rem',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-hover)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
+            >
+              <Download size={14} /> Export Campaign PDF
+            </button>
+          </div>
           <div className="result-body" style={{ marginBottom: 0, padding: '1.5rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
             <div className="result-text" style={{ marginBottom: 0 }}>
               {renderBlogPost(copy.blog_post || copy.body_copy)}
