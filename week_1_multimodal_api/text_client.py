@@ -156,6 +156,13 @@ class TextClient:
                     f"Looking for the ultimate upgrade? Discover {product_name} today. ✨ #Tech",
                     f"Don't settle for less. Experience premium quality with {product_name}. 🔥 #Excellence"
                 ],
+                "seo_tags": [
+                    "".join(c for c in str(product_name).lower() if c.isalnum() or c == " ").replace(" ", "-") if product_name else "brand",
+                    "marketing",
+                    "promotion",
+                    "deals",
+                    "innovation"
+                ],
                 "image_banners": [
                     {
                         "badge": "✨ EXCLUSIVE EDITION",
@@ -232,6 +239,9 @@ class TextClient:
                 data["image_banners"][0]["supporting_message"] = "A premium solution engineered to enhance comfort, style, and daily productivity."
             if len(data["image_banners"]) >= 2 and "supporting_message" not in data["image_banners"][1]:
                 data["image_banners"][1]["supporting_message"] = "An elegant addition that complements your modern lifestyle and enhances daily workflow."
+            if "seo_tags" not in data or not isinstance(data["seo_tags"], list) or len(data["seo_tags"]) == 0:
+                prod_slug = "".join(c for c in str(product_name).lower() if c.isalnum() or c == " ").replace(" ", "-") if product_name else "brand"
+                data["seo_tags"] = [prod_slug, "marketing", "promotion", "deals", "innovation"]
             final_data = data
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON response: {e}. Raw content: {raw_text}")
@@ -246,6 +256,13 @@ class TextClient:
                     "Ignite your vision with our latest release! ✨ #Innovation",
                     "Transform the way you work and live. 🚀 #Excellence",
                     "Experience the premium standard in technology today. 🔥 #Tech"
+                ],
+                "seo_tags": [
+                    "".join(c for c in str(product_name).lower() if c.isalnum() or c == " ").replace(" ", "-") if product_name else "brand",
+                    "marketing",
+                    "promotion",
+                    "deals",
+                    "innovation"
                 ],
                 "image_banners": [
                     {

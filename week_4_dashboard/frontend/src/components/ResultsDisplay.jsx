@@ -606,6 +606,34 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
           </div>
         </div>
 
+        {/* SEO Keywords & Metadata Tags Section */}
+        {copy.seo_tags && copy.seo_tags.length > 0 && (
+          <div className="result-section">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent)' }}>
+              <Tag size={20} />
+              SEO Keywords & Metadata Tags
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', padding: '1.25rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              {copy.seo_tags.map((tag, idx) => (
+                <span key={idx} style={{
+                  padding: '0.45rem 0.9rem',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '30px',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  color: 'var(--text-main)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  boxShadow: 'var(--shadow-sm)'
+                }}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 2 AI Promotional Images Section */}
         {(assetUrls.length > 0 || status === 'PROGRESS') && (
           <div className="result-section">

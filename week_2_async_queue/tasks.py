@@ -77,6 +77,13 @@ def generate_campaign_task(
                 f"Sleek design meets premium performance. Discover the future today. ✨ #Tech #NewProduct",
                 f"Don't settle for less. Experience premium quality. 🔥 #Brand #Innovation"
             ],
+            "seo_tags": [
+                product_slug,
+                "marketing",
+                "innovation",
+                "premium-quality",
+                "lifestyle-upgrade"
+            ],
             "image_banners": [
                 {
                     "badge": "✨ EXCLUSIVE EDITION",
@@ -129,41 +136,6 @@ def generate_campaign_task(
             "image_data_uris": image_data_uris,
             "status": "SUCCESS"
         }
-    
-    # 1. Generate Structured Copy (Blog Post + 3 Tweets)
-    if generate_text:
-        self.update_state(state="PROGRESS", meta={"step": "Generating structured marketing copy..."})
-        logger.info(f"[{self.request.id}] Generating copy via TextClient...")
-        
-        copy_result = text_client.generate_copy(
-            product_name=product_name,
-            product_description=product_description,
-            tone=tone,
-            target_audience=target_audience
-        )
-    else:
-        logger.info(f"[{self.request.id}] Skipping copy generation as generate_text is set to False.")
-        copy_result = {
-            "product_description": product_description or f"Experience the excellence of {product_name}.",
-            "headline": f"Discover {product_name} today!",
-            "funny_slogan": "Premium and sleek lifestyle upgrades.",
-            "features": [],
-            "blog_post": "",
-            "tweets": [],
-            "image_banners": []
-        }
-    
-    # 2. Generate 2 AI Promotional Images
-    self.update_state(
-        state="PROGRESS", 
-        meta={
-            "step": "Generating 2 AI promotional images...",
-            "copy": copy_result,
-            "product_name": product_name,
-            "tone": tone
-        }
-    )
-    logger.info(f"[{self.request.id}] Generating 2 promotional images via ImageClient...")
     
     # Diverse pools for Image 1 (Studio & Artistic Hero Shots)
     environments_1 = [
@@ -220,7 +192,6 @@ def generate_campaign_task(
     light2 = random.choice(lighting_2)
     comp2 = random.choice(composition_2)
 
-    # Ensure both prompts describe the product consistently as an ultra-premium, high-end luxury version.
     base_desc = image_prompt if image_prompt else product_name
     product_visual_desc = (
         f"an ultra-premium, sleek luxury commercial edition of {base_desc} "
@@ -275,40 +246,83 @@ def generate_campaign_task(
         f"High-end 8K advertising photography finish.\n\n"
         f"{avoid_list}"
     )
-    
+
     warnings = []
     image_data_uris = []
     
-    if generate_images and getattr(config, "GENERATE_IMAGES", True):
-        # Generate Image 1 independently
-        try:
-            logger.info(f"[{self.request.id}] Generating Image 1: {prompt_1}")
-            img1_bytes = image_client.generate_image(prompt_1, tone=tone, width=1024, height=1024, product_name=product_name, image_reference=image_reference, warnings=warnings)
-            save_image_to_disk(img1_bytes, f"{product_slug}_img1_{self.request.id}.png")
-            import base64
-            b64_img1 = base64.b64encode(img1_bytes).decode("utf-8")
-            image_data_uris.append(f"data:image/jpeg;base64,{b64_img1}")
-        except Exception as e:
-            logger.error(f"[{self.request.id}] Image 1 generation failed: {e}")
-            warnings.append(f"Image 1 generation pipeline error: {e}")
-            
-        # Generate Image 2 independently
-        try:
-            logger.info(f"[{self.request.id}] Generating Image 2: {prompt_2}")
-            img2_bytes = image_client.generate_image(prompt_2, tone=tone, width=1024, height=1024, product_name=product_name, image_reference=image_reference, warnings=warnings)
-            save_image_to_disk(img2_bytes, f"{product_slug}_img2_{self.request.id}.png")
-            import base64
-            b64_img2 = base64.b64encode(img2_bytes).decode("utf-8")
-            image_data_uris.append(f"data:image/jpeg;base64,{b64_img2}")
-        except Exception as e:
-            logger.error(f"[{self.request.id}] Image 2 generation failed: {e}")
-            warnings.append(f"Image 2 generation pipeline error: {e}")
-    else:
-        logger.info(f"[{self.request.id}] Skipping image generation as GENERATE_IMAGES is set to False or generate_images flag is False.")
-        
-    logger.info(f"[{self.request.id}] Campaign generation completed successfully!")
+    # Update state to PROGRESS to indicate parallel generation is running
+    self.update_state(
+        state="PROGRESS",
+        meta={
+            "step": "Generating text copy & promotional images in parallel...",
+            "product_name": product_name,
+            "tone": tone
+        }
+    )
     
-    # Remove duplicate warning items to keep output clean
+    from week_3_parallel_execution.orchestrator import run_parallel_campaign
+    from week_3_parallel_execution.schemas import CampaignCopySchema
+    
+    # Run text & image generation in parallel
+    logger.info(f"[{self.request.id}] Executing copy and image generation in parallel...")
+    parallel_results = run_parallel_campaign(
+        text_client=text_client,
+        image_client=image_client,
+        product_name=product_name,
+        product_description=product_description,
+        tone=tone,
+        target_audience=target_audience,
+        image_prompt=image_prompt,
+        image_reference=image_reference,
+        generate_text=generate_text,
+        generate_images=generate_images and getattr(config, "GENERATE_IMAGES", True),
+        prompt_1=prompt_1,
+        prompt_2=prompt_2,
+        warnings=warnings
+    )
+    
+    # Process copy result
+    copy_result = parallel_results.get("copy")
+    if not copy_result:
+        if generate_text:
+            logger.error(f"[{self.request.id}] Parallel copy generation returned empty or failed.")
+            warnings.append("Text generation failed to return content during parallel execution.")
+        
+        copy_result = {
+            "product_description": product_description or f"Experience the excellence of {product_name}.",
+            "headline": f"Discover {product_name} today!",
+            "funny_slogan": "Premium and sleek lifestyle upgrades.",
+            "features": [],
+            "blog_post": "",
+            "tweets": [],
+            "seo_tags": [],
+            "image_banners": []
+        }
+    else:
+        try:
+            # Validate schema
+            CampaignCopySchema(**copy_result)
+            logger.info("✅ Parallel campaign copy matches CampaignCopySchema validation successfully.")
+        except Exception as validation_err:
+            logger.warning(f"⚠️ Copy validation warning: {validation_err}")
+        
+    # Process images results
+    import base64
+    for idx, key in enumerate(["image_1", "image_2"]):
+        img_bytes = parallel_results.get(key)
+        if img_bytes:
+            try:
+                save_image_to_disk(img_bytes, f"{product_slug}_img{idx+1}_{self.request.id}.png")
+                b64_img = base64.b64encode(img_bytes).decode("utf-8")
+                image_data_uris.append(f"data:image/jpeg;base64,{b64_img}")
+            except Exception as disk_err:
+                logger.error(f"[{self.request.id}] Saving or encoding image {idx+1} failed: {disk_err}")
+                warnings.append(f"Image {idx+1} post-processing failed: {disk_err}")
+        else:
+            if generate_images and getattr(config, "GENERATE_IMAGES", True):
+                warnings.append(f"Image {idx+1} generation returned no bytes.")
+                
+    logger.info(f"[{self.request.id}] Campaign generation completed successfully!")
     clean_warnings = list(dict.fromkeys(warnings))
     
     return {
