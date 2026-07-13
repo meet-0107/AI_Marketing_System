@@ -1,6 +1,7 @@
 import React from 'react';
-import { Loader2, AlertCircle, Megaphone, Twitter, FileText, Image as ImageIcon, Sparkles, Tag, Award, Zap, ShieldCheck, TrendingUp, Star, CheckCircle, ArrowRight, Clock, Facebook, Instagram, ThumbsUp, Download } from 'lucide-react';
+import { Loader2, AlertCircle, Megaphone, Twitter, FileText, Image as ImageIcon, Sparkles, Tag, Award, Zap, ShieldCheck, TrendingUp, Star, CheckCircle, ArrowRight, Clock, Facebook, Instagram, ThumbsUp, Download, Edit2, Copy, Check, RotateCw, Save, X } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const parseBoldText = (text) => {
   if (!text) return '';
@@ -62,6 +63,172 @@ const renderBlogPost = (text) => {
 };
 
 export default function ResultsDisplay({ taskId, status, progressStep, result, error }) {
+  const imageRef1 = React.useRef(null);
+  const imageRef2 = React.useRef(null);
+
+  const [blogPost, setBlogPost] = React.useState('');
+  const [tweets, setTweets] = React.useState([]);
+  const [isEditingBlog, setIsEditingBlog] = React.useState(false);
+  const [tempBlogPost, setTempBlogPost] = React.useState('');
+  const [editingTweetIdx, setEditingTweetIdx] = React.useState(null);
+  const [tempTweetText, setTempTweetText] = React.useState('');
+  const [copiedStatus, setCopiedStatus] = React.useState({});
+
+  const [regeneratingTweetIdx, setRegeneratingTweetIdx] = React.useState(null);
+
+  const [isRegeneratingBlog, setIsRegeneratingBlog] = React.useState(false);
+  const [isRegeneratingImage1, setIsRegeneratingImage1] = React.useState(false);
+  const [isRegeneratingImage2, setIsRegeneratingImage2] = React.useState(false);
+
+  const [customImage1, setCustomImage1] = React.useState(null);
+  const [customImage2, setCustomImage2] = React.useState(null);
+
+  React.useEffect(() => {
+    if (result && result.copy) {
+      setBlogPost(result.copy.blog_post || result.copy.body_copy || '');
+      setTweets(result.copy.tweets || []);
+      setCustomImage1(null);
+      setCustomImage2(null);
+    }
+  }, [result]);
+
+  const handleCopyToClipboard = async (text, key) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedStatus((prev) => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setCopiedStatus((prev) => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const handleRegenerate = async (elementType) => {
+    if (!result) return;
+    const isIndividualTweet = elementType.startsWith('tweet_');
+    let tweetIndex = null;
+    if (isIndividualTweet) {
+      tweetIndex = parseInt(elementType.split('_')[1], 10) - 1;
+      setRegeneratingTweetIdx(tweetIndex);
+    }
+
+    if (elementType === 'blog_post') setIsRegeneratingBlog(true);
+    else if (elementType === 'image_1') setIsRegeneratingImage1(true);
+    else if (elementType === 'image_2') setIsRegeneratingImage2(true);
+
+    try {
+      const response = await fetch('/api/regenerate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          product_name: result.product_name,
+          product_description: result.product_description || '',
+          tone: result.tone || 'professional',
+          target_audience: result.target_audience || '',
+          element_type: elementType,
+          image_prompt: result.image_prompt || '',
+          image_reference: result.image_reference || '',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate asset element.');
+      }
+
+      const data = await response.json();
+
+      if (elementType === 'blog_post') {
+        setBlogPost(data.blog_post);
+        setIsEditingBlog(false);
+      } else if (elementType === 'tweets') {
+        setTweets(data.tweets);
+        setEditingTweetIdx(null);
+      } else if (isIndividualTweet) {
+        const updatedTweets = [...tweets];
+        updatedTweets[tweetIndex] = data.tweet;
+        setTweets(updatedTweets);
+        setEditingTweetIdx(null);
+      } else if (elementType === 'image_1') {
+        setCustomImage1(data.image_url);
+      } else if (elementType === 'image_2') {
+        setCustomImage2(data.image_url);
+      }
+    } catch (err) {
+      console.error('Error during regeneration:', err);
+      alert('Regeneration failed: ' + err.message);
+    } finally {
+      if (elementType === 'blog_post') setIsRegeneratingBlog(false);
+      else if (elementType === 'image_1') setIsRegeneratingImage1(false);
+      else if (elementType === 'image_2') setIsRegeneratingImage2(false);
+      if (isIndividualTweet) setRegeneratingTweetIdx(null);
+    }
+  };
+
+  const downloadImage = async (ref, filename) => {
+    if (!ref.current) return;
+    try {
+      // Wait for all images inside the container to fully load
+      const images = ref.current.getElementsByTagName('img');
+      for (let img of images) {
+        if (!img.complete) {
+          await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        }
+      }
+
+      // Check if images are data URIs (mock mode) or remote URLs
+      let hasRemoteImages = false;
+      for (let img of images) {
+        if (img.src && !img.src.startsWith('data:')) {
+          hasRemoteImages = true;
+        }
+      }
+
+      // Capture the entire composite (image + text overlays) via html2canvas
+      const canvas = await html2canvas(ref.current, {
+        useCORS: hasRemoteImages,
+        allowTaint: true,
+        scale: 2,
+        backgroundColor: '#0f172a',
+        logging: false,
+        width: ref.current.offsetWidth,
+        height: ref.current.offsetHeight
+      });
+
+      // Convert canvas to proper JPEG Blob manually
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const base64 = dataUrl.split(',')[1];
+      const byteString = atob(base64);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: 'image/jpeg' });
+
+      // Download via Blob URL (Chrome respects filename on blob: URLs)
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.style.display = 'none';
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 200);
+    } catch (err) {
+      console.error('Failed to download image:', err);
+    }
+  };
+
   // Empty State
   if (!taskId && !result && !error) {
     return (
@@ -101,11 +268,11 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
           <div className="orb-ring"></div>
           <div className="orb-core"></div>
         </div>
-        
+
         <h3 className="glitch-text">
           Crafting Your Campaign
         </h3>
-        
+
         <p className="loading-subtitle">
           Generating your assets...
         </p>
@@ -131,54 +298,54 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
     const getProductPrice = (name) => {
       const defaultPrice = { original: 1499, discounted: 1199, discountPercent: 20 };
       if (!name) return defaultPrice;
-      
+
       let hash = 0;
       for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
       }
-      
+
       const lowerName = name.toLowerCase();
       let minPrice = 399;
       let maxPrice = 1999;
-      
+
       // Category 1: Low-cost items (Mug, Cup, Pen, Bottle, Keychain, etc.)
-      if (lowerName.includes('mug') || lowerName.includes('cup') || lowerName.includes('pen') || 
-          lowerName.includes('keychain') || lowerName.includes('sticker') || lowerName.includes('notebook') || 
-          lowerName.includes('bottle') || lowerName.includes('glass') || lowerName.includes('tshirt') || 
-          lowerName.includes('shirt') || lowerName.includes('cap') || lowerName.includes('plate')) {
+      if (lowerName.includes('mug') || lowerName.includes('cup') || lowerName.includes('pen') ||
+        lowerName.includes('keychain') || lowerName.includes('sticker') || lowerName.includes('notebook') ||
+        lowerName.includes('bottle') || lowerName.includes('glass') || lowerName.includes('tshirt') ||
+        lowerName.includes('shirt') || lowerName.includes('cap') || lowerName.includes('plate')) {
         minPrice = 199;
         maxPrice = 599;
       }
       // Category 3: Mid-range items (Headphones, Earbuds, Smartwatch, Keyboard, Coffee Maker, etc.)
-      else if (lowerName.includes('headphone') || lowerName.includes('earbud') || lowerName.includes('watch') || 
-               lowerName.includes('smartwatch') || lowerName.includes('keyboard') || lowerName.includes('mouse') || 
-               lowerName.includes('charger') || lowerName.includes('speaker') || lowerName.includes('blender') || 
-               lowerName.includes('kettle') || lowerName.includes('coffee') || lowerName.includes('thermos')) {
+      else if (lowerName.includes('headphone') || lowerName.includes('earbud') || lowerName.includes('watch') ||
+        lowerName.includes('smartwatch') || lowerName.includes('keyboard') || lowerName.includes('mouse') ||
+        lowerName.includes('charger') || lowerName.includes('speaker') || lowerName.includes('blender') ||
+        lowerName.includes('kettle') || lowerName.includes('coffee') || lowerName.includes('thermos')) {
         minPrice = 999;
         maxPrice = 4999;
       }
       // Category 2: High-end premium items (Laptop, Smartphone, TV, Tablet, etc.)
-      else if (lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('smartphone') || 
-               lowerName.includes('tv') || lowerName.includes('television') || lowerName.includes('camera') || 
-               lowerName.includes('computer') || lowerName.includes('tablet') || lowerName.includes('macbook') ||
-               lowerName.includes('ipad') || lowerName.includes('iphone')) {
+      else if (lowerName.includes('laptop') || lowerName.includes('phone') || lowerName.includes('smartphone') ||
+        lowerName.includes('tv') || lowerName.includes('television') || lowerName.includes('camera') ||
+        lowerName.includes('computer') || lowerName.includes('tablet') || lowerName.includes('macbook') ||
+        lowerName.includes('ipad') || lowerName.includes('iphone')) {
         minPrice = 14999;
         maxPrice = 79999;
       }
-      
+
       // Calculate dynamic price based on hash inside the range
       const range = maxPrice - minPrice;
       let base = minPrice + (Math.abs(hash) % Math.floor(range / 100)) * 100;
-      
+
       // If it's Category 2 (High-end), let's step in larger multiples (e.g. multiples of 1000)
       if (minPrice >= 14999) {
         base = minPrice + (Math.abs(hash) % Math.floor(range / 1000)) * 1000;
       }
-      
+
       const original = base - 1; // e.g. 299, 1499, 29999
       const discountPercent = ((Math.abs(hash) % 6) + 2) * 5; // Dynamic discount: 10%, 15%, 20%, 25%, 30%, 35%
       const discounted = Math.round(original * (1 - (discountPercent / 100))); // Apply dynamic discount
-      
+
       return { original, discounted, discountPercent };
     };
 
@@ -265,18 +432,18 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
     const getDynamicTheme = (toneName, name, isComplementary = false) => {
       const hash = getHash(name || 'default');
       const offset = isComplementary ? 1 : 0;
-      
+
       const subsetIndices = {
         professional: [0, 1, 5],
         playful: [1, 3, 4],
         minimalist: [0, 3, 5],
         futuristic: [4, 2, 3]
       };
-      
+
       const allowed = subsetIndices[toneName] || subsetIndices.professional;
       const paletteIndex = allowed[(hash + offset) % allowed.length];
       const selected = luxuryPalettes[paletteIndex];
-      
+
       return {
         ...selected,
         primary: selected.primaryGradient.includes('#1e1b4b') ? '#312e81' : '#1e293b',
@@ -416,16 +583,16 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
 
     const getDynamicSlogan = (name, apiSlogan) => {
       const lowerSlogan = (apiSlogan || '').toLowerCase();
-      if (apiSlogan && 
-          !lowerSlogan.includes('sleek and clever') && 
-          !lowerSlogan.includes('witty premium') &&
-          !lowerSlogan.includes('ignite your vision') &&
-          apiSlogan.length > 5) {
+      if (apiSlogan &&
+        !lowerSlogan.includes('sleek and clever') &&
+        !lowerSlogan.includes('witty premium') &&
+        !lowerSlogan.includes('ignite your vision') &&
+        apiSlogan.length > 5) {
         return apiSlogan;
       }
 
       const lowerName = (name || '').toLowerCase();
-      
+
       if (lowerName.includes('mug') || lowerName.includes('cup') || lowerName.includes('bottle') || lowerName.includes('kettle') || lowerName.includes('coffee') || lowerName.includes('brew') || lowerName.includes('maker')) {
         const mugSlogans = [
           'Perfect Heat in Every Sip',
@@ -438,7 +605,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         const hash = getHash(name || '');
         return mugSlogans[hash % mugSlogans.length];
       }
-      
+
       if (lowerName.includes('headphone') || lowerName.includes('earbud') || lowerName.includes('speaker') || lowerName.includes('audio') || lowerName.includes('sound')) {
         const audioSlogans = [
           'Cancel Noise, Discover Sound Now',
@@ -575,7 +742,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(22);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      
+
       const titleLines = doc.splitTextToSize(result.product_name.toUpperCase(), contentWidth);
       doc.text(titleLines, margin, yPos);
       yPos += titleLines.length * 8 + 4;
@@ -593,7 +760,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
       doc.text(`Campaign Tone: ${result.tone.charAt(0).toUpperCase() + result.tone.slice(1)}   |   Target Audience: ${result.target_audience || 'General B2C'}`, margin, yPos);
       yPos += 5;
-      
+
       doc.setDrawColor(226, 232, 240);
       doc.line(margin, yPos, margin + contentWidth, yPos);
       yPos += 12;
@@ -624,7 +791,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFontSize(9.5);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
 
-      const rawBlog = copy.blog_post || '';
+      const rawBlog = blogPost || '';
       const paragraphs = rawBlog.split('\n');
 
       paragraphs.forEach((para) => {
@@ -686,18 +853,18 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
 
-      const tweetsList = copy.tweets || [];
+      const tweetsList = tweets || [];
       tweetsList.forEach((tweet, index) => {
         const prodNameClean = (result.product_name || 'Brand').split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
-        const cleanedTweet = tweet.includes('#') 
-          ? tweet 
+        const cleanedTweet = tweet.includes('#')
+          ? tweet
           : `${tweet} #${prodNameClean} #Innovation`;
-        
+
         const lines = doc.splitTextToSize(cleanedTweet, contentWidth - 10);
         const blockHeight = lines.length * 5 + 10;
-        
+
         checkPageBreak(blockHeight);
-        
+
         doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
         doc.rect(margin, yPos - 4, contentWidth, blockHeight - 2, 'F');
         doc.setDrawColor(226, 232, 240);
@@ -706,7 +873,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
         doc.text(`Variant ${index + 1}:`, margin + 5, yPos + 1);
-        
+
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(textColor[0], textColor[1], textColor[2]);
         doc.text(lines, margin + 5, yPos + 7);
@@ -745,7 +912,11 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         doc.text("Promotional AI-Generated Graphics", margin, yPos);
         yPos += 10;
 
-        assetUrls.forEach((url, index) => {
+        const finalAssetUrls = [
+          customImage1 || assetUrls[0],
+          customImage2 || assetUrls[1]
+        ].filter(Boolean);
+        finalAssetUrls.forEach((url, index) => {
           checkPageBreak(95);
 
           doc.setFont('helvetica', 'bold');
@@ -757,21 +928,21 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
           try {
             const format = url.includes('png') ? 'PNG' : 'JPEG';
             doc.addImage(url, format, margin, yPos, 80, 80);
-            
+
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9.5);
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             const bannerInfo = banners[index] || {};
             const textX = margin + 85;
             let textY = yPos + 10;
-            
+
             doc.text("Banner Overlay Copy:", textX, textY);
             textY += 6;
-            
+
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(8.5);
             doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-            
+
             doc.text(`Badge: ${bannerInfo.badge || '✨ EXCLUSIVE'}`, textX, textY);
             textY += 5;
             doc.text(`Title: ${bannerInfo.title || 'PREMIUM'}`, textX, textY);
@@ -782,11 +953,11 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
             textY += 5;
             doc.text(`Tag: ${bannerInfo.extra_tag || ''}`, textX, textY);
             textY += 6;
-            
+
             doc.setFont('helvetica', 'italic');
             const supportingMessageLines = doc.splitTextToSize(bannerInfo.supporting_message || '', contentWidth - 85);
             doc.text(supportingMessageLines, textX, textY);
-            
+
           } catch (imgError) {
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(9.5);
@@ -839,48 +1010,109 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
               <FileText size={20} />
               Official Blog Post
             </h3>
-            <button 
+            <button
               onClick={exportToPDF}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '0.5rem', 
-                padding: '0.5rem 1rem', 
-                background: 'var(--primary)', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: 'var(--radius-md)', 
-                fontWeight: 600, 
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.8rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 600,
                 cursor: 'pointer',
                 boxShadow: 'var(--shadow-sm)',
-                fontSize: '0.85rem',
-                transition: 'background-color 0.2s ease'
+                fontSize: '0.75rem',
+                transition: 'background-color 0.2s ease',
+                fontFamily: 'var(--font-body)'
               }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-hover)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
             >
-              <Download size={14} /> Export Campaign PDF
+              <Download size={12} /> Export PDF
             </button>
           </div>
-          <div className="result-body" style={{ marginBottom: 0, padding: '1.5rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-            <div className="result-text" style={{ marginBottom: 0 }}>
-              {renderBlogPost(copy.blog_post || copy.body_copy)}
+          <div className="result-body" style={{ marginBottom: 0, padding: '1.5rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', position: 'relative' }}>
+            {isRegeneratingBlog && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)' }}>
+                <Loader2 className="animate-spin" size={32} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+              </div>
+            )}
+            
+            {/* Top Toolbar INSIDE Blog Card */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              {isEditingBlog ? (
+                <>
+                  <button
+                    onClick={() => { setBlogPost(tempBlogPost); setIsEditingBlog(false); }}
+                    style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                  >
+                    <Save size={12} /> Save
+                  </button>
+                  <button
+                    onClick={() => setIsEditingBlog(false)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                  >
+                    <X size={12} /> Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleRegenerate('blog_post')}
+                    disabled={isRegeneratingBlog}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingBlog ? 0.6 : 1 }}
+                  >
+                    <RotateCw size={12} className={isRegeneratingBlog ? 'animate-spin' : ''} />
+                    {isRegeneratingBlog ? 'Regenerating...' : 'Regenerate'}
+                  </button>
+                  <button
+                    onClick={() => handleCopyToClipboard(blogPost, 'blog')}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                  >
+                    {copiedStatus['blog'] ? <Check size={12} style={{ color: '#10b981' }} /> : <Copy size={12} />}
+                    {copiedStatus['blog'] ? 'Copied!' : 'Copy'}
+                  </button>
+                  <button
+                    onClick={() => { setIsEditingBlog(true); setTempBlogPost(blogPost); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                  >
+                    <Edit2 size={12} /> Edit
+                  </button>
+                </>
+              )}
             </div>
+
+            {isEditingBlog ? (
+              <textarea
+                value={tempBlogPost}
+                onChange={(e) => setTempBlogPost(e.target.value)}
+                style={{ width: '100%', minHeight: '300px', padding: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', fontFamily: 'monospace', fontSize: '0.95rem', lineHeight: '1.6', resize: 'vertical', outline: 'none' }}
+              />
+            ) : (
+              <div className="result-text" style={{ marginBottom: 0 }}>
+                {renderBlogPost(blogPost)}
+              </div>
+            )}
           </div>
         </div>
 
         {/* 3 Tweet Variants Section */}
-        <div className="result-section">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: '#1da1f2' }}>
-            <Twitter size={20} />
-            3 Tweet Variants
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="result-section" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#1da1f2' }}>
+              <Twitter size={20} />
+              3 Tweet Variants
+            </h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
             {tweets.map((tweet, index) => {
-              const cleanedTweet = tweet.includes('#') 
-                ? tweet 
+              const cleanedTweet = tweet.includes('#')
+                ? tweet
                 : `${tweet} #${(result.product_name || 'Brand').split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Brand'} #Innovation #NewArrival`;
-              
+
               let formattedTweet = cleanedTweet;
               const hashtagRegex = /(\s*(#[a-zA-Z0-9_\u0900-\u097F]+\s*)+)$/;
               const match = cleanedTweet.match(hashtagRegex);
@@ -890,12 +1122,81 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                 formattedTweet = `${mainText}\n${hashtags}`;
               }
 
+              const isEditingThisTweet = editingTweetIdx === index;
+
               return (
-                <div key={index} style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <div key={index} style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start', position: 'relative' }}>
+                  {regeneratingTweetIdx === index && (
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)' }}>
+                      <Loader2 className="animate-spin" size={24} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+                    </div>
+                  )}
                   <Twitter size={24} style={{ color: '#1da1f2', flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Variant {index + 1}</div>
-                    <p style={{ fontSize: '1rem', color: 'var(--text-main)', whiteSpace: 'pre-line' }}>{formattedTweet}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Variant {index + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {isEditingThisTweet ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                const newTweets = [...tweets];
+                                newTweets[index] = tempTweetText;
+                                setTweets(newTweets);
+                                setEditingTweetIdx(null);
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                            >
+                              <Save size={12} /> Save
+                            </button>
+                            <button
+                              onClick={() => setEditingTweetIdx(null)}
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                            >
+                              <X size={12} /> Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingTweetIdx(index);
+                                setTempTweetText(tweet);
+                              }}
+                              disabled={regeneratingTweetIdx !== null}
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: (regeneratingTweetIdx !== null) ? 0.5 : 1 }}
+                            >
+                              <Edit2 size={12} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleCopyToClipboard(cleanedTweet, `tweet_${index}`)}
+                              disabled={regeneratingTweetIdx !== null}
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: (regeneratingTweetIdx !== null) ? 0.5 : 1 }}
+                            >
+                              {copiedStatus[`tweet_${index}`] ? <Check size={12} style={{ color: '#10b981' }} /> : <Copy size={12} />}
+                              {copiedStatus[`tweet_${index}`] ? 'Copied!' : 'Copy'}
+                            </button>
+                            <button
+                              onClick={() => handleRegenerate(`tweet_${index + 1}`)}
+                              disabled={regeneratingTweetIdx !== null}
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: (regeneratingTweetIdx !== null) ? 0.5 : 1 }}
+                            >
+                              <RotateCw size={12} className={regeneratingTweetIdx === index ? 'animate-spin' : ''} />
+                              {regeneratingTweetIdx === index ? 'Regenerating...' : 'Regenerate'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {isEditingThisTweet ? (
+                      <textarea
+                        value={tempTweetText}
+                        onChange={(e) => setTempTweetText(e.target.value)}
+                        style={{ width: '100%', minHeight: '80px', padding: '0.5rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', fontSize: '0.95rem', lineHeight: '1.4', resize: 'vertical', outline: 'none', fontFamily: 'var(--font-body)' }}
+                      />
+                    ) : (
+                      <p style={{ fontSize: '1rem', color: 'var(--text-main)', whiteSpace: 'pre-line', margin: 0 }}>{formattedTweet}</p>
+                    )}
                   </div>
                 </div>
               );
@@ -941,82 +1242,329 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
             {assetUrls.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
                 {assetUrls.map((url, index) => {
-                const rawBanner = banners[index] || banners[0];
-                const banner = {
-                  ...rawBanner,
-                  badge: (rawBanner.badge || '').replace(/20%/g, `${price.discountPercent}%`),
-                  bullet1: (rawBanner.bullet1 || '').replace(/20%/g, `${price.discountPercent}%`),
-                  bullet2: (rawBanner.bullet2 || '').replace(/20%/g, `${price.discountPercent}%`),
-                };
+                  const rawBanner = banners[index] || banners[0];
+                  const banner = {
+                    ...rawBanner,
+                    badge: (rawBanner.badge || '').replace(/20%/g, `${price.discountPercent}%`),
+                    bullet1: (rawBanner.bullet1 || '').replace(/20%/g, `${price.discountPercent}%`),
+                    bullet2: (rawBanner.bullet2 || '').replace(/20%/g, `${price.discountPercent}%`),
+                  };
 
-                if (index === 0) {
-                  return (
-                    <div key={index} style={{ position: 'relative' }}>
-                      {/* Corner Ribbon - Beautiful Folded Style outside clipped wrapper */}
-                      <div style={{
-                        position: 'absolute',
-                        top: '-8px',
-                        left: '-8px',
-                        zIndex: 15,
-                        width: '120px',
-                        height: '120px',
-                        overflow: 'hidden',
-                        pointerEvents: 'none'
-                      }}>
-                        {/* Fold shadow - top edge wrapping around the image boundary */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '90px',
-                          width: '0',
-                          height: '0',
-                          borderStyle: 'solid',
-                          borderWidth: '0 8px 8px 0',
-                          borderColor: 'transparent #7f1d1d transparent transparent',
-                          zIndex: 10
-                        }} />
-                        
-                        {/* Fold shadow - left edge wrapping around the image boundary */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '90px',
-                          left: '8px',
-                          width: '0',
-                          height: '0',
-                          borderStyle: 'solid',
-                          borderWidth: '0 0 8px 8px',
-                          borderColor: 'transparent transparent transparent #7f1d1d',
-                          zIndex: 10
-                        }} />
+                  if (index === 0) {
+                    return (
+                      <div key={index} style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                        <div className="result-media" style={{ marginBottom: 0, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }}>
+                          {/* Top Header Bar */}
+                          <div style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                              data-html2canvas-ignore="true"
+                              onClick={() => handleRegenerate('image_1')}
+                              disabled={isRegeneratingImage1}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.4rem 0.8rem',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid var(--border-color)',
+                                color: 'var(--text-main)',
+                                borderRadius: 'var(--radius-md)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                transition: 'all 0.2s ease',
+                                opacity: isRegeneratingImage1 ? 0.6 : 1
+                              }}
+                            >
+                              <RotateCw size={12} className={isRegeneratingImage1 ? 'animate-spin' : ''} />
+                              {isRegeneratingImage1 ? 'Regenerating...' : 'Regenerate'}
+                            </button>
+                            <button
+                              data-html2canvas-ignore="true"
+                              onClick={() => downloadImage(imageRef1, `${result.product_name || 'Product'} - ad1.jpg`)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.4rem 0.8rem',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius-md)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                boxShadow: 'var(--shadow-sm)',
+                                fontSize: '0.8rem',
+                                transition: 'background-color 0.2s ease',
+                                fontFamily: 'var(--font-body)'
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-hover)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
+                            >
+                              <Download size={12} /> Download JPG
+                            </button>
+                          </div>
 
-                        {/* Main rotated ribbon strip */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '30px',
-                          left: '-30px',
-                          width: '160px',
-                          background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 50%, #be123c 100%)',
-                          color: 'white',
-                          textAlign: 'center',
-                          fontWeight: 800,
-                          fontSize: '0.72rem',
-                          letterSpacing: '1.2px',
-                          padding: '6px 0',
-                          transform: 'rotate(-45deg)',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-                          textTransform: 'uppercase',
-                          fontFamily: 'var(--font-heading)',
-                          lineHeight: '1.2',
-                          zIndex: 12
-                        }}>
-                          NEW PRODUCT
+                          {/* Image Container with Elegant direct-overlay layout */}
+                          <div ref={imageRef1} style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
+                            {isRegeneratingImage1 && (
+                              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Loader2 className="animate-spin" size={36} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+                              </div>
+                            )}
+                            {/* Corner Ribbon inside Image Container (Clipped cleanly by container overflow hidden) */}
+                            <div style={{
+                              position: 'absolute',
+                              top: '25px',
+                              left: '-28px',
+                              width: '130px',
+                              zIndex: 15,
+                              transform: 'rotate(-45deg)',
+                              background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 50%, #be123c 100%)',
+                              color: 'white',
+                              textAlign: 'center',
+                              fontWeight: 800,
+                              fontSize: '0.68rem',
+                              letterSpacing: '1px',
+                              padding: '5px 0',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                              textTransform: 'uppercase',
+                              fontFamily: 'var(--font-heading)',
+                              lineHeight: '1.2',
+                              pointerEvents: 'none'
+                            }}>
+                              NEW PRODUCT
+                            </div>
+
+                            {/* Top Right Social Follow Widget */}
+                            <div style={{ position: 'absolute', top: '1.25rem', right: '1.5rem', zIndex: 10, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                              {/* Twitter (Light Blue Circle) */}
+                              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                <Twitter size={10} style={{ color: 'white', fill: 'white' }} />
+                              </div>
+                              {/* Instagram (Gradient Circle) */}
+                              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                <Instagram size={10} style={{ color: 'white' }} />
+                              </div>
+                              {/* Facebook (Dark Blue Circle) */}
+                              <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                <Facebook size={10} style={{ color: 'white', fill: 'white' }} />
+                              </div>
+                            </div>
+
+                            {/* Pristine Background Image */}
+                            <img src={customImage1 || url} crossOrigin={(customImage1 || url).startsWith('data:') ? undefined : 'anonymous'} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
+
+                            {/* Direct Text Overlay Content (Slogan at top, features on left & right sides of centered product) */}
+                            <div>
+                              {/* Short Headline at the Top Center */}
+                              <div style={{ position: 'absolute', top: '4.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', color: theme1.accent, pointerEvents: 'none' }}>
+                                <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme1.accent, letterSpacing: '1px', textAlign: 'center', textShadow: '0 2px 8px rgba(0,0,0,0.95)', margin: 0 }}>
+                                  {copy.headline || banner.title || 'ULTRA PREMIUM BUILD'}
+                                </h1>
+                              </div>
+
+                              {/* Left Column Features (Float middle-left of center product, with soft backing edge vignette) */}
+                              <div style={{ position: 'absolute', left: 0, top: '25%', bottom: '15%', width: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1.5rem', paddingLeft: '1.5rem', paddingRight: '2rem', background: 'linear-gradient(to right, rgba(15, 23, 42, 0.8) 20%, rgba(15, 23, 42, 0) 100%)', pointerEvents: 'none', transform: 'translateY(35px)' }}>
+                                {leftBullets.map((bullet, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.92rem', color: '#f8fafc', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
+                                    {getFeatureIcon(bullet, idx, 22, theme1.accent)}
+                                    <span>{bullet}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Right Column Features (Float middle-right of center product, with soft backing edge vignette) */}
+                              <div style={{ position: 'absolute', right: 0, top: '25%', bottom: '15%', width: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', paddingRight: '1.5rem', paddingLeft: '2rem', background: 'linear-gradient(to left, rgba(15, 23, 42, 0.8) 20%, rgba(15, 23, 42, 0) 100%)', pointerEvents: 'none', transform: 'translateY(35px)' }}>
+                                {rightBullets.map((bullet, idx) => (
+                                  <div key={idx} style={{ fontSize: '0.92rem', color: '#f8fafc', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
+                                    {getFeatureIcon(bullet, idx + 3, 22, theme1.accent)}
+                                    <span>{bullet}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Bottom Control Bar Overlay */}
+                              <div style={{ position: 'absolute', bottom: '1.25rem', left: '3.5rem', right: '1.5rem', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
+                                {/* Left side: Website & User-Provided QR Code */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', maxWidth: '350px', flexShrink: 0, minWidth: 0 }}>
+                                  {/* Exact QR Code SVG matching user's upload */}
+                                  <div style={{ padding: '5px', background: 'white', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', width: '54px', height: '54px', flexShrink: 0 }}>
+                                    <svg width="44" height="44" viewBox="0 0 21 21" fill="none" style={{ display: 'block' }}>
+                                      <rect width="21" height="21" fill="white" />
+
+                                      {/* Top Left Finder */}
+                                      <path d="M0 0h7v7H0zm1 1v5h5V1zm1 1h3v3H2z" fill="black" fillRule="evenodd" />
+
+                                      {/* Top Right Finder */}
+                                      <path d="M14 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3z" fill="black" fillRule="evenodd" />
+
+                                      {/* Bottom Left Finder */}
+                                      <path d="M0 14h7v7H0zm1 1v5h5v-5zm1 1h3v3H2z" fill="black" fillRule="evenodd" />
+
+                                      {/* Scattered QR code pixels matching user's image */}
+                                      <rect x="8" y="2" width="1" height="1" fill="black" />
+                                      <rect x="10" y="0" width="1" height="2" fill="black" />
+                                      <rect x="9" y="3" width="2" height="1" fill="black" />
+                                      <rect x="11" y="1" width="1" height="1" fill="black" />
+                                      <rect x="12" y="2" width="1" height="2" fill="black" />
+                                      <rect x="8" y="5" width="2" height="1" fill="black" />
+                                      <rect x="9" y="4" width="1" height="1" fill="black" />
+                                      <rect x="11" y="4" width="2" height="1" fill="black" />
+                                      <rect x="10" y="6" width="1" height="1" fill="black" />
+                                      <rect x="12" y="5" width="1" height="2" fill="black" />
+
+                                      <rect x="0" y="8" width="2" height="1" fill="black" />
+                                      <rect x="3" y="8" width="1" height="1" fill="black" />
+                                      <rect x="5" y="8" width="3" height="1" fill="black" />
+                                      <rect x="9" y="8" width="2" height="1" fill="black" />
+                                      <rect x="12" y="8" width="2" height="1" fill="black" />
+                                      <rect x="16" y="8" width="1" height="1" fill="black" />
+                                      <rect x="18" y="8" width="3" height="1" fill="black" />
+
+                                      <rect x="0" y="9" width="1" height="2" fill="black" />
+                                      <rect x="2" y="10" width="2" height="1" fill="black" />
+                                      <rect x="5" y="10" width="1" height="2" fill="black" />
+                                      <rect x="7" y="11" width="2" height="1" fill="black" />
+                                      <rect x="9" y="9" width="2" height="2" fill="black" />
+                                      <rect x="12" y="10" width="1" height="1" fill="black" />
+                                      <rect x="14" y="9" width="2" height="1" fill="black" />
+                                      <rect x="17" y="10" width="1" height="2" fill="black" />
+                                      <rect x="19" y="9" width="2" height="3" fill="black" />
+
+                                      <rect x="8" y="12" width="2" height="1" fill="black" />
+                                      <rect x="11" y="12" width="2" height="1" fill="black" />
+                                      <rect x="14" y="12" width="2" height="1" fill="black" />
+                                      <rect x="17" y="12" width="1" height="1" fill="black" />
+
+                                      <rect x="8" y="13" width="1" height="2" fill="black" />
+                                      <rect x="10" y="14" width="2" height="1" fill="black" />
+                                      <rect x="13" y="13" width="1" height="2" fill="black" />
+                                      <rect x="15" y="14" width="1" height="1" fill="black" />
+                                      <rect x="17" y="14" width="2" height="1" fill="black" />
+                                      <rect x="20" y="13" width="1" height="2" fill="black" />
+
+                                      <rect x="8" y="16" width="1" height="1" fill="black" />
+                                      <rect x="11" y="15" width="2" height="1" fill="black" />
+                                      <rect x="14" y="16" width="1" height="2" fill="black" />
+                                      <rect x="16" y="15" width="2" height="1" fill="black" />
+                                      <rect x="19" y="16" width="1" height="1" fill="black" />
+
+                                      <rect x="9" y="18" width="1" height="3" fill="black" />
+                                      <rect x="11" y="18" width="2" height="1" fill="black" />
+                                      <rect x="14" y="18" width="1" height="1" fill="black" />
+                                      <rect x="16" y="18" width="2" height="2" fill="black" />
+                                      <rect x="19" y="18" width="2" height="1" fill="black" />
+
+                                      <rect x="11" y="20" width="3" height="1" fill="black" />
+                                      <rect x="15" y="20" width="2" height="1" fill="black" />
+                                      <rect x="18" y="20" width="1" height="1" fill="black" />
+                                    </svg>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)', padding: '0.4rem 0.8rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.3px', whiteSpace: 'normal', wordBreak: 'break-all', display: 'block', lineHeight: 1.15, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                                      {websiteUrl}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Right side: Shop Now CTA Button */}
+                                <div
+                                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 20px ' + theme1.btnHoverGlow; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px ' + theme1.btnGlow; }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.15rem', background: theme1.primaryGradient, color: 'white', borderRadius: theme1.btnRadius, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 12px ' + theme1.btnGlow, pointerEvents: 'auto', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px', transition: 'all 0.2s ease' }}
+                                >
+                                  Explore Now <ArrowRight size={14} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    );
+                  }
 
+                  // Asset #2 (Sleek Value & Discount Overlay - Direct layout, No Card Containers or Buttons)
+                  return (
+                    <div key={index} style={{ display: 'flex', flexDirection: 'column' }}>
                       <div className="result-media" style={{ marginBottom: 0, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }}>
-                        {/* Image Container with Elegant direct-overlay layout */}
-                        <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
-                          
+                        {/* Top Header Bar */}
+                        <div style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem' }}>
+                          <button
+                            data-html2canvas-ignore="true"
+                            onClick={() => handleRegenerate('image_2')}
+                            disabled={isRegeneratingImage2}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.4rem 0.8rem',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-main)',
+                              borderRadius: 'var(--radius-md)',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s ease',
+                              opacity: isRegeneratingImage2 ? 0.6 : 1
+                            }}
+                          >
+                            <RotateCw size={12} className={isRegeneratingImage2 ? 'animate-spin' : ''} />
+                            {isRegeneratingImage2 ? 'Regenerating...' : 'Regenerate'}
+                          </button>
+                          <button
+                            data-html2canvas-ignore="true"
+                            onClick={() => downloadImage(imageRef2, `${result.product_name || 'Product'} - ad2.jpg`)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.4rem 0.8rem',
+                              background: 'var(--primary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 'var(--radius-md)',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              boxShadow: 'var(--shadow-sm)',
+                              fontSize: '0.8rem',
+                              transition: 'background-color 0.2s ease',
+                              fontFamily: 'var(--font-body)'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-hover)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary)'; }}
+                          >
+                            <Download size={12} /> Download JPG
+                          </button>
+                        </div>
+
+                        {/* Image Container with Direct Layout */}
+                        <div ref={imageRef2} style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
+                          {isRegeneratingImage2 && (
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Loader2 className="animate-spin" size={36} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+                            </div>
+                          )}
+                          {/* No dark vignette covering the image, ensuring product remains 100% bright and visible */}
+
+                          {/* Top Left Discount Tag Based on Price - Swallowtail Red Ribbon Banner Design */}
+                          <div style={{ position: 'absolute', top: 0, left: '1.5rem', zIndex: 15, width: '56px', height: '72px', backgroundColor: '#dc2626', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '10px', clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 50% 85%, 0% 100%)', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }}>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                              {Math.round(((price.original - price.discounted) / price.original) * 100)}%
+                            </span>
+                            <span style={{ fontSize: '0.5rem', fontWeight: 800, color: 'white', marginTop: '3px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              DISCOUNT
+                            </span>
+                          </div>
+
+                          {/* Top Brand Story / Unique Dynamic Slogan */}
+                          <div style={{ position: 'absolute', top: '7.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, color: theme2.accent, pointerEvents: 'none' }}>
+                            <div style={{ fontSize: '1.15rem', fontStyle: 'italic', color: theme2.accent, fontWeight: 700, lineHeight: 1.45, textAlign: 'center', textShadow: '0 2px 6px rgba(0,0,0,0.95)', letterSpacing: '0.5px' }}>
+                              "{finalSlogan}"
+                            </div>
+                          </div>
+
                           {/* Top Right Social Follow Widget */}
                           <div style={{ position: 'absolute', top: '1.25rem', right: '1.5rem', zIndex: 10, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                             {/* Twitter (Light Blue Circle) */}
@@ -1033,233 +1581,54 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                             </div>
                           </div>
 
-                          {/* Pristine Background Image */}
-                          <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
-
-                        {/* Direct Text Overlay Content (Slogan at top, features on left & right sides of centered product) */}
-                        <div>
-                          {/* Short Headline at the Top Center */}
-                          <div style={{ position: 'absolute', top: '4.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', color: theme1.accent, pointerEvents: 'none' }}>
-                            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme1.accent, letterSpacing: '1px', textAlign: 'center', textShadow: '0 2px 8px rgba(0,0,0,0.95)', margin: 0 }}>
-                              {copy.headline || banner.title || 'ULTRA PREMIUM BUILD'}
-                            </h1>
-                          </div>
-
-                          {/* Left Column Features (Float middle-left of center product, with soft backing edge vignette) */}
-                          <div style={{ position: 'absolute', left: 0, top: '25%', bottom: '15%', width: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1.5rem', paddingLeft: '1.5rem', paddingRight: '2rem', background: 'linear-gradient(to right, rgba(15, 23, 42, 0.8) 20%, rgba(15, 23, 42, 0) 100%)', pointerEvents: 'none', transform: 'translateY(35px)' }}>
-                            {leftBullets.map((bullet, idx) => (
-                              <div key={idx} style={{ fontSize: '0.92rem', color: '#f8fafc', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
-                                {getFeatureIcon(bullet, idx, 22, theme1.accent)}
-                                <span>{bullet}</span>
+                          {/* Direct Overlay (Leaves center & top 100% visible, no container boxes) */}
+                          <div style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', color: 'white', pointerEvents: 'none' }}>
+                            {/* Discount Offer Details */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
+                              <div style={{ color: theme2.accent, fontSize: '0.85rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                {banner.badge}
                               </div>
-                            ))}
-                          </div>
+                              <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 800, color: theme2.accent, lineHeight: 1.1 }}>
+                                {banner.title}
+                              </h1>
 
-                          {/* Right Column Features (Float middle-right of center product, with soft backing edge vignette) */}
-                          <div style={{ position: 'absolute', right: 0, top: '25%', bottom: '15%', width: '180px', zIndex: 10, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', paddingRight: '1.5rem', paddingLeft: '2rem', background: 'linear-gradient(to left, rgba(15, 23, 42, 0.8) 20%, rgba(15, 23, 42, 0) 100%)', pointerEvents: 'none', transform: 'translateY(35px)' }}>
-                            {rightBullets.map((bullet, idx) => (
-                              <div key={idx} style={{ fontSize: '0.92rem', color: '#f8fafc', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
-                                {getFeatureIcon(bullet, idx + 3, 22, theme1.accent)}
-                                <span>{bullet}</span>
+                              {/* Dynamic Pricing Tag */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', margin: '0.2rem 0', fontSize: '1.2rem', fontWeight: 700 }}>
+                                <span style={{ color: '#ef4444', textDecoration: 'line-through', opacity: 0.85 }}>₹{price.original}</span>
+                                <span style={{ color: '#10b981' }}>₹{price.discounted}</span>
                               </div>
-                            ))}
-                          </div>
 
-                          {/* Bottom Control Bar Overlay */}
-                          <div style={{ position: 'absolute', bottom: '1.25rem', left: '3.5rem', right: '1.5rem', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', pointerEvents: 'none' }}>
-                            {/* Left side: Website & User-Provided QR Code */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', maxWidth: '350px', flexShrink: 0, minWidth: 0 }}>
-                              {/* Exact QR Code SVG matching user's upload */}
-                              <div style={{ padding: '5px', background: 'white', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', width: '54px', height: '54px', flexShrink: 0 }}>
-                                <svg width="44" height="44" viewBox="0 0 21 21" fill="none" style={{ display: 'block' }}>
-                                  <rect width="21" height="21" fill="white" />
-                                  
-                                  {/* Top Left Finder */}
-                                  <path d="M0 0h7v7H0zm1 1v5h5V1zm1 1h3v3H2z" fill="black" fillRule="evenodd" />
-                                  
-                                  {/* Top Right Finder */}
-                                  <path d="M14 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3z" fill="black" fillRule="evenodd" />
-                                  
-                                  {/* Bottom Left Finder */}
-                                  <path d="M0 14h7v7H0zm1 1v5h5v-5zm1 1h3v3H2z" fill="black" fillRule="evenodd" />
-                                  
-                                  {/* Scattered QR code pixels matching user's image */}
-                                  <rect x="8" y="2" width="1" height="1" fill="black" />
-                                  <rect x="10" y="0" width="1" height="2" fill="black" />
-                                  <rect x="9" y="3" width="2" height="1" fill="black" />
-                                  <rect x="11" y="1" width="1" height="1" fill="black" />
-                                  <rect x="12" y="2" width="1" height="2" fill="black" />
-                                  <rect x="8" y="5" width="2" height="1" fill="black" />
-                                  <rect x="9" y="4" width="1" height="1" fill="black" />
-                                  <rect x="11" y="4" width="2" height="1" fill="black" />
-                                  <rect x="10" y="6" width="1" height="1" fill="black" />
-                                  <rect x="12" y="5" width="1" height="2" fill="black" />
-                                  
-                                  <rect x="0" y="8" width="2" height="1" fill="black" />
-                                  <rect x="3" y="8" width="1" height="1" fill="black" />
-                                  <rect x="5" y="8" width="3" height="1" fill="black" />
-                                  <rect x="9" y="8" width="2" height="1" fill="black" />
-                                  <rect x="12" y="8" width="2" height="1" fill="black" />
-                                  <rect x="16" y="8" width="1" height="1" fill="black" />
-                                  <rect x="18" y="8" width="3" height="1" fill="black" />
-
-                                  <rect x="0" y="9" width="1" height="2" fill="black" />
-                                  <rect x="2" y="10" width="2" height="1" fill="black" />
-                                  <rect x="5" y="10" width="1" height="2" fill="black" />
-                                  <rect x="7" y="11" width="2" height="1" fill="black" />
-                                  <rect x="9" y="9" width="2" height="2" fill="black" />
-                                  <rect x="12" y="10" width="1" height="1" fill="black" />
-                                  <rect x="14" y="9" width="2" height="1" fill="black" />
-                                  <rect x="17" y="10" width="1" height="2" fill="black" />
-                                  <rect x="19" y="9" width="2" height="3" fill="black" />
-
-                                  <rect x="8" y="12" width="2" height="1" fill="black" />
-                                  <rect x="11" y="12" width="2" height="1" fill="black" />
-                                  <rect x="14" y="12" width="2" height="1" fill="black" />
-                                  <rect x="17" y="12" width="1" height="1" fill="black" />
-
-                                  <rect x="8" y="13" width="1" height="2" fill="black" />
-                                  <rect x="10" y="14" width="2" height="1" fill="black" />
-                                  <rect x="13" y="13" width="1" height="2" fill="black" />
-                                  <rect x="15" y="14" width="1" height="1" fill="black" />
-                                  <rect x="17" y="14" width="2" height="1" fill="black" />
-                                  <rect x="20" y="13" width="1" height="2" fill="black" />
-
-                                  <rect x="8" y="16" width="1" height="1" fill="black" />
-                                  <rect x="11" y="15" width="2" height="1" fill="black" />
-                                  <rect x="14" y="16" width="1" height="2" fill="black" />
-                                  <rect x="16" y="15" width="2" height="1" fill="black" />
-                                  <rect x="19" y="16" width="1" height="1" fill="black" />
-
-                                  <rect x="9" y="18" width="1" height="3" fill="black" />
-                                  <rect x="11" y="18" width="2" height="1" fill="black" />
-                                  <rect x="14" y="18" width="1" height="1" fill="black" />
-                                  <rect x="16" y="18" width="2" height="2" fill="black" />
-                                  <rect x="19" y="18" width="2" height="1" fill="black" />
-
-                                  <rect x="11" y="20" width="3" height="1" fill="black" />
-                                  <rect x="15" y="20" width="2" height="1" fill="black" />
-                                  <rect x="18" y="20" width="1" height="1" fill="black" />
-                                </svg>
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)', padding: '0.4rem 0.8rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.3px', whiteSpace: 'normal', wordBreak: 'break-all', display: 'block', lineHeight: 1.15, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                                  {websiteUrl}
-                                </span>
+                              <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+                                {banner.extra_tag}
                               </div>
                             </div>
 
-                            {/* Right side: Shop Now CTA Button */}
-                            <div 
-                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 20px ' + theme1.btnHoverGlow; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px ' + theme1.btnGlow; }}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 1.15rem', background: theme1.primaryGradient, color: 'white', borderRadius: theme1.btnRadius, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 12px ' + theme1.btnGlow, pointerEvents: 'auto', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.5px', transition: 'all 0.2s ease' }}
-                            >
-                              Explore Now <ArrowRight size={14} />
+                            {/* CTA Shop Now Button Badge and Promo Code Container */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                              {/* Dynamic Promo Code Badge */}
+                              <div style={{ padding: '0.35rem 0.7rem', border: '1px dashed #10b981', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', textShadow: '0 2px 4px rgba(0,0,0,0.95)', whiteSpace: 'nowrap' }}>
+                                CODE: {promoCode}
+                              </div>
+
+                              {/* Shop Now CTA Button */}
+                              <div
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 20px ' + theme2.btnHoverGlow; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px ' + theme2.btnGlow; }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', background: theme2.primaryGradient, color: 'white', borderRadius: theme2.btnRadius, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 12px ' + theme2.btnGlow, pointerEvents: 'auto', cursor: 'pointer', transition: 'all 0.2s ease', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                              >
+                                Shop Now <ArrowRight size={16} />
+                              </div>
                             </div>
                           </div>
+
+                          {/* Pristine Background Image (Perfecty clean and visible without any overlays) */}
+                          <img src={customImage2 || url} crossOrigin={(customImage2 || url).startsWith('data:') ? undefined : 'anonymous'} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              }
-
-                // Asset #2 (Sleek Value & Discount Overlay - Direct layout, No Card Containers or Buttons)
-                return (
-                  <div key={index} className="result-media" style={{ marginBottom: 0, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-md)' }}>
-                    {/* Top Header Bar */}
-                    <div style={{ padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                      <span>Promotional Asset #{index + 1}</span>
-                      <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 700 }}>
-                        <Tag size={14} /> 🎉 Promotional Offer
-                      </span>
-                    </div>
-
-                    {/* Image Container with Direct Layout */}
-                    <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
-                      {/* No dark vignette covering the image, ensuring product remains 100% bright and visible */}
-
-                      {/* Top Left Discount Tag Based on Price - Swallowtail Red Ribbon Banner Design */}
-                      <div style={{ position: 'absolute', top: 0, left: '1.5rem', zIndex: 15, width: '56px', height: '72px', backgroundColor: '#dc2626', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '10px', clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 50% 85%, 0% 100%)', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.35))' }}>
-                        <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
-                          {Math.round(((price.original - price.discounted) / price.original) * 100)}%
-                        </span>
-                        <span style={{ fontSize: '0.5rem', fontWeight: 800, color: 'white', marginTop: '3px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                          DISCOUNT
-                        </span>
-                      </div>
-
-                      {/* Top Brand Story / Unique Dynamic Slogan */}
-                      <div style={{ position: 'absolute', top: '7.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, color: theme2.accent, pointerEvents: 'none' }}>
-                        <div style={{ fontSize: '1.15rem', fontStyle: 'italic', color: theme2.accent, fontWeight: 700, lineHeight: 1.45, textAlign: 'center', textShadow: '0 2px 6px rgba(0,0,0,0.95)', letterSpacing: '0.5px' }}>
-                          "{finalSlogan}"
-                        </div>
-                      </div>
-
-                      {/* Top Right Social Follow Widget */}
-                      <div style={{ position: 'absolute', top: '1.25rem', right: '1.5rem', zIndex: 10, display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        {/* Twitter (Light Blue Circle) */}
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                          <Twitter size={10} style={{ color: 'white', fill: 'white' }} />
-                        </div>
-                        {/* Instagram (Gradient Circle) */}
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                          <Instagram size={10} style={{ color: 'white' }} />
-                        </div>
-                        {/* Facebook (Dark Blue Circle) */}
-                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1877f2', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                          <Facebook size={10} style={{ color: 'white', fill: 'white' }} />
-                        </div>
-                      </div>
-
-                      {/* Direct Overlay (Leaves center & top 100% visible, no container boxes) */}
-                      <div style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem', right: '1.5rem', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', color: 'white', pointerEvents: 'none' }}>
-                        {/* Discount Offer Details */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textShadow: '0 2px 4px rgba(0,0,0,0.95)' }}>
-                          <div style={{ color: theme2.accent, fontSize: '0.85rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                            {banner.badge}
-                          </div>
-                          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 800, color: theme2.accent, lineHeight: 1.1 }}>
-                            {banner.title}
-                          </h1>
-
-                          {/* Dynamic Pricing Tag */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', margin: '0.2rem 0', fontSize: '1.2rem', fontWeight: 700 }}>
-                            <span style={{ color: '#ef4444', textDecoration: 'line-through', opacity: 0.85 }}>₹{price.original}</span>
-                            <span style={{ color: '#10b981' }}>₹{price.discounted}</span>
-                          </div>
-
-                          <div style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
-                            {banner.extra_tag}
-                          </div>
-                        </div>
-
-                        {/* CTA Shop Now Button Badge and Promo Code Container */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                          {/* Dynamic Promo Code Badge */}
-                          <div style={{ padding: '0.35rem 0.7rem', border: '1px dashed #10b981', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', textShadow: '0 2px 4px rgba(0,0,0,0.95)', whiteSpace: 'nowrap' }}>
-                            CODE: {promoCode}
-                          </div>
-
-                          {/* Shop Now CTA Button */}
-                          <div 
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 20px ' + theme2.btnHoverGlow; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px ' + theme2.btnGlow; }}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem', background: theme2.primaryGradient, color: 'white', borderRadius: theme2.btnRadius, fontSize: '0.85rem', fontWeight: 700, boxShadow: '0 4px 12px ' + theme2.btnGlow, pointerEvents: 'auto', cursor: 'pointer', transition: 'all 0.2s ease', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-                          >
-                            Shop Now <ArrowRight size={16} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Pristine Background Image (Perfecty clean and visible without any overlays) */}
-                      <img src={url} alt={`Promotional Asset ${index + 1}`} className="result-image" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
             ) : (
               <div style={{ padding: '3.5rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-main)', gap: '1rem' }}>
                 <Loader2 className="animate-spin" size={32} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
