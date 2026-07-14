@@ -1197,7 +1197,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                   )}
                   <Twitter size={24} style={{ color: '#1da1f2', flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
                       <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Variant {index + 1}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         {isEditingThisTweet ? (
