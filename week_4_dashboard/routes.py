@@ -122,7 +122,7 @@ async def regenerate_element(request: RegenerateRequest):
     
     element_type = request.element_type
     
-    if element_type in ('blog_post', 'tweets') or element_type.startswith('tweet_'):
+    if element_type in ('blog_post', 'tweets', 'seo_tags') or element_type.startswith('tweet_'):
         try:
             from week_1_multimodal_api.text_client import TextClient
             import config
@@ -141,6 +141,10 @@ async def regenerate_element(request: RegenerateRequest):
                             f"Variant 2 refined: {request.refinement_instruction} #Premium",
                             f"Variant 3 refined: {request.refinement_instruction} #Upgrade"
                         ]}
+                    elif element_type == 'seo_tags':
+                        current = request.current_content or ""
+                        tags = [t.strip().replace("#", "") for t in current.split(",") if t.strip()]
+                        return {"seo_tags": tags + [f"refined_{request.refinement_instruction.replace(' ', '_')[:15]}"]}
                     else:
                         current = request.current_content or "Tweet variant text"
                         return {"tweet": f"{current} ✨ [Refined: {request.refinement_instruction}]"}
@@ -163,6 +167,14 @@ async def regenerate_element(request: RegenerateRequest):
                             f"Tired of compromise? Get the best of both worlds with {request.product_name}! 🔥 #Upgrade"
                         ]
                         return {"tweets": new_tweets}
+                    elif element_type == 'seo_tags':
+                        return {"seo_tags": [
+                            "".join(c for c in str(request.product_name).lower() if c.isalnum() or c == " ").replace(" ", "-"),
+                            "marketing",
+                            "promotion",
+                            "deals",
+                            "exclusive"
+                        ]}
                     else:
                         mock_tweets = [
                             f"Upgrade your day with {request.product_name}. Designed for pros. ⚡ #Innovation #SmartStyle",
@@ -182,6 +194,10 @@ async def regenerate_element(request: RegenerateRequest):
                 )
                 if element_type == 'blog_post':
                     return {"blog_post": refined_text}
+                elif element_type == 'seo_tags':
+                    # Parse output as a comma-separated list of tags
+                    tags = [t.strip().replace("#", "").strip() for t in refined_text.split(",") if t.strip()]
+                    return {"seo_tags": tags}
                 else:
                     return {"tweet": refined_text}
             else:
@@ -197,6 +213,9 @@ async def regenerate_element(request: RegenerateRequest):
                 elif element_type == 'tweets':
                     tweets_content = copy_res.get("tweets") or []
                     return {"tweets": tweets_content}
+                elif element_type == 'seo_tags':
+                    seo_content = copy_res.get("seo_tags") or []
+                    return {"seo_tags": seo_content}
                 else:
                     tweets_content = copy_res.get("tweets") or []
                     idx = int(element_type.split('_')[1]) - 1

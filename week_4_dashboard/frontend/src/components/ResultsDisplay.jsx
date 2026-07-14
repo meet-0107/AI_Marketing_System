@@ -95,10 +95,18 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
   const [showRefineImage2, setShowRefineImage2] = React.useState(false);
   const [refineInstructionImage2, setRefineInstructionImage2] = React.useState('');
 
+  const [seoTags, setSeoTags] = React.useState([]);
+  const [isEditingSeo, setIsEditingSeo] = React.useState(false);
+  const [tempSeoTagsText, setTempSeoTagsText] = React.useState('');
+  const [showRefineSeo, setShowRefineSeo] = React.useState(false);
+  const [refineInstructionSeo, setRefineInstructionSeo] = React.useState('');
+  const [isRegeneratingSeo, setIsRegeneratingSeo] = React.useState(false);
+
   React.useEffect(() => {
     if (result && result.copy) {
       setBlogPost(result.copy.blog_post || result.copy.body_copy || '');
       setTweets(result.copy.tweets || []);
+      setSeoTags(result.copy.seo_tags || []);
       setCustomImage1(null);
       setCustomImage2(null);
     }
@@ -128,6 +136,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
     if (elementType === 'blog_post') setIsRegeneratingBlog(true);
     else if (elementType === 'image_1') setIsRegeneratingImage1(true);
     else if (elementType === 'image_2') setIsRegeneratingImage2(true);
+    else if (elementType === 'seo_tags') setIsRegeneratingSeo(true);
 
     try {
       const response = await fetch('/api/regenerate', {
@@ -169,6 +178,9 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         setCustomImage1(data.image_url);
       } else if (elementType === 'image_2') {
         setCustomImage2(data.image_url);
+      } else if (elementType === 'seo_tags') {
+        setSeoTags(data.seo_tags);
+        setIsEditingSeo(false);
       }
     } catch (err) {
       console.error('Error during regeneration:', err);
@@ -177,6 +189,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       if (elementType === 'blog_post') setIsRegeneratingBlog(false);
       else if (elementType === 'image_1') setIsRegeneratingImage1(false);
       else if (elementType === 'image_2') setIsRegeneratingImage2(false);
+      else if (elementType === 'seo_tags') setIsRegeneratingSeo(false);
       if (isIndividualTweet) setRegeneratingTweetIdx(null);
     }
   };
@@ -1301,29 +1314,133 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         </div>
 
         {/* SEO Keywords & Metadata Tags Section */}
-        {copy.seo_tags && copy.seo_tags.length > 0 && (
+        {seoTags && seoTags.length > 0 && (
           <div className="result-section">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent)' }}>
-              <Tag size={20} />
-              SEO Keywords & Metadata Tags
-            </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', padding: '1.25rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-              {copy.seo_tags.map((tag, idx) => (
-                <span key={idx} style={{
-                  padding: '0.45rem 0.9rem',
-                  backgroundColor: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '30px',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  color: 'var(--text-main)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  boxShadow: 'var(--shadow-sm)'
-                }}>
-                  #{tag}
-                </span>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--accent)' }}>
+                <Tag size={20} />
+                SEO Keywords & Metadata Tags
+              </h3>
+            </div>
+            
+            <div className="result-body" style={{ marginBottom: 0, padding: '1.5rem', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', position: 'relative' }}>
+              {isRegeneratingSeo && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)' }}>
+                  <Loader2 className="animate-spin" size={32} style={{ color: 'var(--primary)', animation: 'spin 1.5s linear infinite' }} />
+                </div>
+              )}
+              
+              {/* Top Toolbar INSIDE SEO Card */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                {isEditingSeo ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        const parsed = tempSeoTagsText.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+                        setSeoTags(parsed);
+                        setIsEditingSeo(false);
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                      <Save size={12} /> Save
+                    </button>
+                    <button
+                      onClick={() => setIsEditingSeo(false)}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                      <X size={12} /> Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleRegenerate('seo_tags')}
+                      disabled={isRegeneratingSeo}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingSeo ? 0.6 : 1 }}
+                    >
+                      <RotateCw size={12} className={isRegeneratingSeo ? 'animate-spin' : ''} />
+                      {isRegeneratingSeo ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                    <button
+                      onClick={() => handleCopyToClipboard(seoTags.map(t => `#${t}`).join(', '), 'seo')}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                      {copiedStatus['seo'] ? <Check size={12} style={{ color: '#10b981' }} /> : <Copy size={12} />}
+                      {copiedStatus['seo'] ? 'Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={() => { setIsEditingSeo(true); setTempSeoTagsText(seoTags.join(', ')); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                      <Edit2 size={12} /> Edit
+                    </button>
+                    <button
+                      onClick={() => setShowRefineSeo(!showRefineSeo)}
+                      style={{ background: 'none', border: 'none', color: showRefineSeo ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    >
+                      <Sparkles size={12} /> Refine
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {showRefineSeo && !isEditingSeo && (
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                  <input
+                    type="text"
+                    placeholder="Ask AI to refine keywords... (e.g. 'Add e-commerce terms', 'Make it more technical')"
+                    value={refineInstructionSeo}
+                    onChange={(e) => setRefineInstructionSeo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && refineInstructionSeo.trim()) {
+                        handleRegenerate('seo_tags', refineInstructionSeo, seoTags.join(', '));
+                        setRefineInstructionSeo('');
+                        setShowRefineSeo(false);
+                      }
+                    }}
+                    style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.4rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-main)', outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (refineInstructionSeo.trim()) {
+                        handleRegenerate('seo_tags', refineInstructionSeo, seoTags.join(', '));
+                        setRefineInstructionSeo('');
+                        setShowRefineSeo(false);
+                      }
+                    }}
+                    style={{ padding: '0.4rem 0.85rem', backgroundColor: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+
+              {isEditingSeo ? (
+                <textarea
+                  value={tempSeoTagsText}
+                  onChange={(e) => setTempSeoTagsText(e.target.value)}
+                  style={{ width: '100%', minHeight: '80px', padding: '0.5rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', fontSize: '0.95rem', lineHeight: '1.4', resize: 'vertical', outline: 'none', fontFamily: 'var(--font-body)' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {seoTags.map((tag, idx) => (
+                    <span key={idx} style={{
+                      padding: '0.45rem 0.9rem',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '30px',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      color: 'var(--text-main)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
