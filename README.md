@@ -78,6 +78,24 @@ Redis safely holds tasks and finished work, while Celery handles the heavy lifti
 
 ---
 
+## 📅 Week 3 — Parallel Execution & Clean Output
+
+During Week 3, we focused on performance optimization and formatting consistency:
+* Use `useEffect` and `setInterval` to repeatedly fetch the API status and display a loading state while the task remains pending.
+* Optimize Celery to execute text and image generation simultaneously to cut the overall user wait time in half.
+* Configure the LLM prompts to return a clean JSON payload that neatly separates the blog post, tweets, and SEO tags.
+
+---
+
+## 📅 Week 4 — Dashboard & Data Integrity
+
+During Week 4, we built the full-stack dashboard and added validation layers:
+* Update the AI prompt to strictly return JSON and validate this output using Pydantic schemas to ensure data integrity.
+* Build a frontend dashboard with a loading state that polls the backend and properly formats the final text and image assets.
+* Finalize the repository, ensuring the commit history reflects a steady progression of solving these asynchronous architecture challenges.
+
+---
+
 
 ## 🏗️ System Architecture
 
