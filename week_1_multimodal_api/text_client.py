@@ -329,3 +329,85 @@ class TextClient:
 
         return final_data
 
+    def refine_copy(
+        self,
+        current_content: str,
+        instruction: str,
+        temperature: float = 0.7
+    ) -> str:
+        """
+        Refines a specific piece of copy based on a user's instruction.
+        """
+        system_instruction = (
+            "You are an expert copywriter. Your task is to modify the provided marketing copy "
+            "according to the user's specific editing request. Output ONLY the updated marketing copy. "
+            "Do not include any chat, explanations, or markdown block quotes around the response. Return the text directly."
+        )
+        user_prompt = (
+            f"Original Copy:\n\"\"\"\n{current_content}\n\"\"\"\n\n"
+            f"User Editing Instruction: {instruction}\n\n"
+            f"Please output the modified copy now:"
+        )
+
+        try:
+            logger.info(f"Sending text refinement request to {self.provider} using model: {self.model}")
+            
+            if self.provider == 'gemini':
+                genai_model = genai.GenerativeModel(
+                    model_name=self.model,
+                    system_instruction=system_instruction
+                )
+                completion = genai_model.generate_content(
+                    user_prompt,
+                    generation_config=genai.GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=4096
+                    )
+                )
+                return completion.text.strip()
+            else:
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=temperature,
+                    max_tokens=4096
+                )
+                return completion.choices[0].message.content.strip()
+                
+        except Exception as primary_err:
+            logger.warning(f"Primary text refinement failed: {primary_err}")
+            if getattr(config, "OPENROUTER_API_KEY", None):
+                try:
+                    import requests
+                    headers = {
+                        "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "http://localhost:5173",
+                        "X-Title": "AI Marketing System"
+                    }
+                    payload = {
+                        "model": config.OPENROUTER_MODEL,
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": temperature
+                    }
+                    response = requests.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        json=payload,
+                        headers=headers,
+                        timeout=30
+                    )
+                    response.raise_for_status()
+                    res_data = response.json()
+                    return res_data["choices"][0]["message"]["content"].strip()
+                except Exception as openrouter_err:
+                    logger.error(f"Fallback text refinement via OpenRouter failed: {openrouter_err}")
+            
+            # Simple fallback
+            return f"{current_content}\n\n[Refined with instruction: {instruction}]"
+

@@ -108,12 +108,14 @@ class RegenerateRequest(BaseModel):
     element_type: str  # 'blog_post' | 'tweets' | 'image_1' | 'image_2'
     image_prompt: Optional[str] = None
     image_reference: Optional[str] = None
+    refinement_instruction: Optional[str] = None
+    current_content: Optional[str] = None
 
 @router.post("/regenerate")
 async def regenerate_element(request: RegenerateRequest):
     """
-    Regenerate a specific campaign marketing asset (blog post, tweet group, or individual promotional image)
-    on demand, supporting both mock/demo setups and actual multimodal LLM/Imagen APIs.
+    Regenerate or refine a specific campaign marketing asset (blog post, tweet group, individual tweet, or promotional image)
+    on demand, supporting refinement instructions.
     """
     import base64
     import random
@@ -129,59 +131,81 @@ async def regenerate_element(request: RegenerateRequest):
             if getattr(config, "MOCK_GENERATION", False):
                 import time
                 time.sleep(1.0)
-                if element_type == 'blog_post':
-                    new_blog_post = (
-                        f"# {request.product_name}: The Ultimate Edition\n\n"
-                        f"## Overview\n\n"
-                        f"Welcome to the official showcase of {request.product_name}! Engineered to perfection, "
-                        f"it sets new standards for durability, functionality, and professional design.\n\n"
-                        f"## Highlights\n\n"
-                        f"* **Elite Engineering** — Built using resilient, high-grade materials.\n"
-                        f"* **Exceptional Value** — Offers outstanding productivity and comfort daily."
-                    )
-                    return {"blog_post": new_blog_post}
-                elif element_type == 'tweets':
-                    new_tweets = [
-                        f"Elevate your lifestyle with {request.product_name}! 🚀 #{request.product_name.split()[0]} #Premium",
-                        f"Crafted with perfection in mind. Say hello to {request.product_name}! ✨ #Style #NewArrival",
-                        f"Tired of compromise? Get the best of both worlds with {request.product_name}! 🔥 #Upgrade"
-                    ]
-                    return {"tweets": new_tweets}
+                if request.refinement_instruction:
+                    if element_type == 'blog_post':
+                        current = request.current_content or "Blog content text"
+                        return {"blog_post": f"{current}\n\n*[AI Refined with instruction: '{request.refinement_instruction}']*"}
+                    elif element_type == 'tweets':
+                        return {"tweets": [
+                            f"Variant 1 refined: {request.refinement_instruction} #{request.product_name.split()[0]}",
+                            f"Variant 2 refined: {request.refinement_instruction} #Premium",
+                            f"Variant 3 refined: {request.refinement_instruction} #Upgrade"
+                        ]}
+                    else:
+                        current = request.current_content or "Tweet variant text"
+                        return {"tweet": f"{current} ✨ [Refined: {request.refinement_instruction}]"}
                 else:
-                    # Individual tweet mock
-                    mock_tweets = [
-                        f"Upgrade your day with {request.product_name}. Designed for pros. ⚡ #Innovation #SmartStyle",
-                        f"The ultimate essential is here: {request.product_name}. Discover why! 🌟 #MustHave #Elite",
-                        f"Elevate your lifestyle with {request.product_name}! 🚀 #{request.product_name.split()[0]} #Premium",
-                        f"Crafted with perfection in mind. Say hello to {request.product_name}! ✨ #Style #NewArrival",
-                        f"Tired of compromise? Get the best of both worlds with {request.product_name}! 🔥 #Upgrade"
-                    ]
-                    return {"tweet": random.choice(mock_tweets)}
+                    if element_type == 'blog_post':
+                        new_blog_post = (
+                            f"# {request.product_name}: The Ultimate Edition\n\n"
+                            f"## Overview\n\n"
+                            f"Welcome to the official showcase of {request.product_name}! Engineered to perfection, "
+                            f"it sets new standards for durability, functionality, and professional design.\n\n"
+                            f"## Highlights\n\n"
+                            f"* **Elite Engineering** — Built using resilient, high-grade materials.\n"
+                            f"* **Exceptional Value** — Offers outstanding productivity and comfort daily."
+                        )
+                        return {"blog_post": new_blog_post}
+                    elif element_type == 'tweets':
+                        new_tweets = [
+                            f"Elevate your lifestyle with {request.product_name}! 🚀 #{request.product_name.split()[0]} #Premium",
+                            f"Crafted with perfection in mind. Say hello to {request.product_name}! ✨ #Style #NewArrival",
+                            f"Tired of compromise? Get the best of both worlds with {request.product_name}! 🔥 #Upgrade"
+                        ]
+                        return {"tweets": new_tweets}
+                    else:
+                        mock_tweets = [
+                            f"Upgrade your day with {request.product_name}. Designed for pros. ⚡ #Innovation #SmartStyle",
+                            f"The ultimate essential is here: {request.product_name}. Discover why! 🌟 #MustHave #Elite",
+                            f"Elevate your lifestyle with {request.product_name}! 🚀 #{request.product_name.split()[0]} #Premium",
+                            f"Crafted with perfection in mind. Say hello to {request.product_name}! ✨ #Style #NewArrival",
+                            f"Tired of compromise? Get the best of both worlds with {request.product_name}! 🔥 #Upgrade"
+                        ]
+                        return {"tweet": random.choice(mock_tweets)}
             
             # Real generation
             text_client = TextClient()
-            copy_res = text_client.generate_copy(
-                product_name=request.product_name,
-                product_description=request.product_description or "",
-                tone=request.tone,
-                target_audience=request.target_audience
-            )
-            if element_type == 'blog_post':
-                blog_content = copy_res.get("blog_post") or copy_res.get("body_copy") or ""
-                return {"blog_post": blog_content}
-            elif element_type == 'tweets':
-                tweets_content = copy_res.get("tweets") or []
-                return {"tweets": tweets_content}
-            else:
-                # Individual tweet element_type = 'tweet_1' | 'tweet_2' | 'tweet_3'
-                tweets_content = copy_res.get("tweets") or []
-                idx = int(element_type.split('_')[1]) - 1
-                if idx < len(tweets_content):
-                    return {"tweet": tweets_content[idx]}
-                elif tweets_content:
-                    return {"tweet": random.choice(tweets_content)}
+            if request.refinement_instruction and request.current_content:
+                refined_text = text_client.refine_copy(
+                    current_content=request.current_content,
+                    instruction=request.refinement_instruction
+                )
+                if element_type == 'blog_post':
+                    return {"blog_post": refined_text}
                 else:
-                    return {"tweet": f"Discover the excellence of {request.product_name}! ✨ #Tech #Premium"}
+                    return {"tweet": refined_text}
+            else:
+                copy_res = text_client.generate_copy(
+                    product_name=request.product_name,
+                    product_description=request.product_description or "",
+                    tone=request.tone,
+                    target_audience=request.target_audience
+                )
+                if element_type == 'blog_post':
+                    blog_content = copy_res.get("blog_post") or copy_res.get("body_copy") or ""
+                    return {"blog_post": blog_content}
+                elif element_type == 'tweets':
+                    tweets_content = copy_res.get("tweets") or []
+                    return {"tweets": tweets_content}
+                else:
+                    tweets_content = copy_res.get("tweets") or []
+                    idx = int(element_type.split('_')[1]) - 1
+                    if idx < len(tweets_content):
+                        return {"tweet": tweets_content[idx]}
+                    elif tweets_content:
+                        return {"tweet": random.choice(tweets_content)}
+                    else:
+                        return {"tweet": f"Discover the excellence of {request.product_name}! ✨ #Tech #Premium"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Regeneration failed: {str(e)}")
             
@@ -250,6 +274,8 @@ async def regenerate_element(request: RegenerateRequest):
                 f"featuring exquisite craftsmanship, high-end materials (like brushed metal, polished glass, or matte carbon-fiber), "
                 f"and state-of-the-art professional industrial design details"
             )
+            if request.refinement_instruction:
+                product_visual_desc += f", modified with custom user refinement request: {request.refinement_instruction}"
             
             avoid_list = (
                 "Avoid:\n"

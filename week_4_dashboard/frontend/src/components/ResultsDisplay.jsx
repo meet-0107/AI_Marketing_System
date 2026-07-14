@@ -83,6 +83,18 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
   const [customImage1, setCustomImage1] = React.useState(null);
   const [customImage2, setCustomImage2] = React.useState(null);
 
+  const [showRefineBlog, setShowRefineBlog] = React.useState(false);
+  const [refineInstructionBlog, setRefineInstructionBlog] = React.useState('');
+  
+  const [showRefineTweetIdx, setShowRefineTweetIdx] = React.useState(null);
+  const [refineInstructionTweet, setRefineInstructionTweet] = React.useState('');
+
+  const [showRefineImage1, setShowRefineImage1] = React.useState(false);
+  const [refineInstructionImage1, setRefineInstructionImage1] = React.useState('');
+
+  const [showRefineImage2, setShowRefineImage2] = React.useState(false);
+  const [refineInstructionImage2, setRefineInstructionImage2] = React.useState('');
+
   React.useEffect(() => {
     if (result && result.copy) {
       setBlogPost(result.copy.blog_post || result.copy.body_copy || '');
@@ -104,7 +116,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
     }
   };
 
-  const handleRegenerate = async (elementType) => {
+  const handleRegenerate = async (elementType, refinementInstruction = null, currentContent = null) => {
     if (!result) return;
     const isIndividualTweet = elementType.startsWith('tweet_');
     let tweetIndex = null;
@@ -131,6 +143,8 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
           element_type: elementType,
           image_prompt: result.image_prompt || '',
           image_reference: result.image_reference || '',
+          refinement_instruction: refinementInstruction,
+          current_content: currentContent,
         }),
       });
 
@@ -1081,9 +1095,46 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                   >
                     <Edit2 size={12} /> Edit
                   </button>
+                  <button
+                    onClick={() => setShowRefineBlog(!showRefineBlog)}
+                    style={{ background: 'none', border: 'none', color: showRefineBlog ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                  >
+                    <Sparkles size={12} /> Refine
+                  </button>
                 </>
               )}
             </div>
+
+            {showRefineBlog && !isEditingBlog && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                <input
+                  type="text"
+                  placeholder="Ask AI to modify this blog post... (e.g. 'Make it shorter', 'Write in Steve Jobs style')"
+                  value={refineInstructionBlog}
+                  onChange={(e) => setRefineInstructionBlog(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && refineInstructionBlog.trim()) {
+                      handleRegenerate('blog_post', refineInstructionBlog, blogPost);
+                      setRefineInstructionBlog('');
+                      setShowRefineBlog(false);
+                    }
+                  }}
+                  style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.4rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-main)', outline: 'none' }}
+                />
+                <button
+                  onClick={() => {
+                    if (refineInstructionBlog.trim()) {
+                      handleRegenerate('blog_post', refineInstructionBlog, blogPost);
+                      setRefineInstructionBlog('');
+                      setShowRefineBlog(false);
+                    }
+                  }}
+                  style={{ padding: '0.4rem 0.85rem', backgroundColor: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
 
             {isEditingBlog ? (
               <textarea
@@ -1184,10 +1235,55 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                               <RotateCw size={12} className={regeneratingTweetIdx === index ? 'animate-spin' : ''} />
                               {regeneratingTweetIdx === index ? 'Regenerating...' : 'Regenerate'}
                             </button>
+                            <button
+                              onClick={() => {
+                                if (showRefineTweetIdx === index) {
+                                  setShowRefineTweetIdx(null);
+                                } else {
+                                  setShowRefineTweetIdx(index);
+                                  setRefineInstructionTweet('');
+                                }
+                              }}
+                              disabled={regeneratingTweetIdx !== null}
+                              style={{ background: 'none', border: 'none', color: showRefineTweetIdx === index ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: (regeneratingTweetIdx !== null) ? 0.5 : 1 }}
+                            >
+                              <Sparkles size={12} /> Refine
+                            </button>
                           </>
                         )}
                       </div>
                     </div>
+
+                    {showRefineTweetIdx === index && !isEditingThisTweet && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '0.5rem', padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                        <input
+                          type="text"
+                          placeholder="Ask AI to modify this tweet... (e.g. 'Make it shorter', 'Add emojis')"
+                          value={refineInstructionTweet}
+                          onChange={(e) => setRefineInstructionTweet(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && refineInstructionTweet.trim()) {
+                              handleRegenerate(`tweet_${index + 1}`, refineInstructionTweet, tweet);
+                              setRefineInstructionTweet('');
+                              setShowRefineTweetIdx(null);
+                            }
+                          }}
+                          style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-main)', outline: 'none' }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (refineInstructionTweet.trim()) {
+                              handleRegenerate(`tweet_${index + 1}`, refineInstructionTweet, tweet);
+                              setRefineInstructionTweet('');
+                              setShowRefineTweetIdx(null);
+                            }
+                          }}
+                          style={{ padding: '0.3rem 0.6rem', backgroundColor: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    )}
                     {isEditingThisTweet ? (
                       <textarea
                         value={tempTweetText}
@@ -1281,6 +1377,27 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                             </button>
                             <button
                               data-html2canvas-ignore="true"
+                              onClick={() => setShowRefineImage1(!showRefineImage1)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '0.4rem 0.8rem',
+                                background: showRefineImage1 ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                                border: '1px solid var(--border-color)',
+                                color: showRefineImage1 ? 'white' : 'var(--text-main)',
+                                borderRadius: 'var(--radius-md)',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                transition: 'all 0.2s ease',
+                                opacity: isRegeneratingImage1 ? 0.6 : 1
+                              }}
+                            >
+                              <Sparkles size={12} /> Refine
+                            </button>
+                            <button
+                              data-html2canvas-ignore="true"
                               onClick={() => downloadImage(imageRef1, `${result.product_name || 'Product'} - ad1.jpg`)}
                               style={{
                                 display: 'inline-flex',
@@ -1304,6 +1421,37 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                               <Download size={12} /> Download JPG
                             </button>
                           </div>
+
+                          {showRefineImage1 && (
+                            <div data-html2canvas-ignore="true" style={{ display: 'flex', gap: '0.5rem', padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+                              <input
+                                type="text"
+                                placeholder="Ask AI to refine this image... (e.g. 'Add a cyberpunk background', 'Make lighting warm')"
+                                value={refineInstructionImage1}
+                                onChange={(e) => setRefineInstructionImage1(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && refineInstructionImage1.trim()) {
+                                    handleRegenerate('image_1', refineInstructionImage1);
+                                    setRefineInstructionImage1('');
+                                    setShowRefineImage1(false);
+                                  }
+                                }}
+                                style={{ flex: 1, background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-main)', outline: 'none' }}
+                              />
+                              <button
+                                onClick={() => {
+                                  if (refineInstructionImage1.trim()) {
+                                    handleRegenerate('image_1', refineInstructionImage1);
+                                    setRefineInstructionImage1('');
+                                    setShowRefineImage1(false);
+                                  }
+                                }}
+                                style={{ padding: '0.3rem 0.6rem', backgroundColor: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          )}
 
                           {/* Image Container with Elegant direct-overlay layout */}
                           <div ref={imageRef1} style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
@@ -1515,6 +1663,27 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                           </button>
                           <button
                             data-html2canvas-ignore="true"
+                            onClick={() => setShowRefineImage2(!showRefineImage2)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.4rem 0.8rem',
+                              background: showRefineImage2 ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                              border: '1px solid var(--border-color)',
+                              color: showRefineImage2 ? 'white' : 'var(--text-main)',
+                              borderRadius: 'var(--radius-md)',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s ease',
+                              opacity: isRegeneratingImage2 ? 0.6 : 1
+                            }}
+                          >
+                            <Sparkles size={12} /> Refine
+                          </button>
+                          <button
+                            data-html2canvas-ignore="true"
                             onClick={() => downloadImage(imageRef2, `${result.product_name || 'Product'} - ad2.jpg`)}
                             style={{
                               display: 'inline-flex',
@@ -1538,6 +1707,37 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                             <Download size={12} /> Download JPG
                           </button>
                         </div>
+
+                        {showRefineImage2 && (
+                          <div data-html2canvas-ignore="true" style={{ display: 'flex', gap: '0.5rem', padding: '0.6rem 1.25rem', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+                            <input
+                              type="text"
+                              placeholder="Ask AI to refine this image... (e.g. 'Add a cyberpunk background', 'Make lighting warm')"
+                              value={refineInstructionImage2}
+                              onChange={(e) => setRefineInstructionImage2(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && refineInstructionImage2.trim()) {
+                                  handleRegenerate('image_2', refineInstructionImage2);
+                                  setRefineInstructionImage2('');
+                                  setShowRefineImage2(false);
+                                }
+                              }}
+                              style={{ flex: 1, background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.3rem 0.6rem', fontSize: '0.8rem', color: 'var(--text-main)', outline: 'none' }}
+                            />
+                            <button
+                              onClick={() => {
+                                  if (refineInstructionImage2.trim()) {
+                                    handleRegenerate('image_2', refineInstructionImage2);
+                                    setRefineInstructionImage2('');
+                                    setShowRefineImage2(false);
+                                  }
+                              }}
+                              style={{ padding: '0.3rem 0.6rem', backgroundColor: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-md)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        )}
 
                         {/* Image Container with Direct Layout */}
                         <div ref={imageRef2} style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', display: 'block', backgroundColor: '#0f172a' }}>
