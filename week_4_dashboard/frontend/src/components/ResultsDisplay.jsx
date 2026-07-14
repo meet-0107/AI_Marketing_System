@@ -1088,12 +1088,10 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
               ) : (
                 <>
                   <button
-                    onClick={() => handleRegenerate('blog_post')}
-                    disabled={isRegeneratingBlog}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingBlog ? 0.6 : 1 }}
+                    onClick={() => { setIsEditingBlog(true); setTempBlogPost(blogPost); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
                   >
-                    <RotateCw size={12} className={isRegeneratingBlog ? 'animate-spin' : ''} />
-                    {isRegeneratingBlog ? 'Regenerating...' : 'Regenerate'}
+                    <Edit2 size={12} /> Edit
                   </button>
                   <button
                     onClick={() => handleCopyToClipboard(blogPost, 'blog')}
@@ -1103,10 +1101,12 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                     {copiedStatus['blog'] ? 'Copied!' : 'Copy'}
                   </button>
                   <button
-                    onClick={() => { setIsEditingBlog(true); setTempBlogPost(blogPost); }}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                    onClick={() => handleRegenerate('blog_post')}
+                    disabled={isRegeneratingBlog}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingBlog ? 0.6 : 1 }}
                   >
-                    <Edit2 size={12} /> Edit
+                    <RotateCw size={12} className={isRegeneratingBlog ? 'animate-spin' : ''} />
+                    {isRegeneratingBlog ? 'Regenerating...' : 'Regenerate'}
                   </button>
                   <button
                     onClick={() => setShowRefineBlog(!showRefineBlog)}
@@ -1354,12 +1354,10 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                 ) : (
                   <>
                     <button
-                      onClick={() => handleRegenerate('seo_tags')}
-                      disabled={isRegeneratingSeo}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingSeo ? 0.6 : 1 }}
+                      onClick={() => { setIsEditingSeo(true); setTempSeoTagsText(seoTags.join(', ')); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
                     >
-                      <RotateCw size={12} className={isRegeneratingSeo ? 'animate-spin' : ''} />
-                      {isRegeneratingSeo ? 'Regenerating...' : 'Regenerate'}
+                      <Edit2 size={12} /> Edit
                     </button>
                     <button
                       onClick={() => handleCopyToClipboard(seoTags.map(t => `#${t}`).join(', '), 'seo')}
@@ -1369,10 +1367,12 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
                       {copiedStatus['seo'] ? 'Copied!' : 'Copy'}
                     </button>
                     <button
-                      onClick={() => { setIsEditingSeo(true); setTempSeoTagsText(seoTags.join(', ')); }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600 }}
+                      onClick={() => handleRegenerate('seo_tags')}
+                      disabled={isRegeneratingSeo}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', fontWeight: 600, opacity: isRegeneratingSeo ? 0.6 : 1 }}
                     >
-                      <Edit2 size={12} /> Edit
+                      <RotateCw size={12} className={isRegeneratingSeo ? 'animate-spin' : ''} />
+                      {isRegeneratingSeo ? 'Regenerating...' : 'Regenerate'}
                     </button>
                     <button
                       onClick={() => setShowRefineSeo(!showRefineSeo)}
