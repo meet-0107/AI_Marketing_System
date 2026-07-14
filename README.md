@@ -117,8 +117,10 @@ flowchart TD
 
     subgraph WORKER ["⚙️ Celery Worker  —  tasks.py"]
         E[generate_campaign_task]
-        E --> F[Phase 1: TextClient]
-        E --> G[Phase 2: ImageClient]
+        E -->|ThreadPoolExecutor| P[run_parallel_campaign]
+        P --> F[Parallel Thread: TextClient]
+        P --> G1[Parallel Thread: Image 1 Client]
+        P --> G2[Parallel Thread: Image 2 Client]
     end
 
     subgraph TEXT ["✍️ Text Generation"]
@@ -127,11 +129,16 @@ flowchart TD
         F --> T3[OpenRouter<br/>fallback 2]
     end
 
-    subgraph IMAGE ["🖼️ Image Generation"]
-        G --> I1[Cloudflare Workers AI<br/>primary]
-        G --> I2[Hugging Face API<br/>fallback 1]
-        G --> I3[Local saved_images/<br/>fallback 2]
-        G --> I4[Unsplash / Picsum<br/>fallback 3]
+    subgraph IMAGE_1 ["🖼️ Image 1 Generation"]
+        G1 --> I1_1[Cloudflare Workers AI<br/>primary]
+        G1 --> I1_2[Hugging Face API<br/>fallback 1]
+        G1 --> I1_3[Local saved_images/<br/>fallback 2]
+    end
+
+    subgraph IMAGE_2 ["🖼️ Image 2 Generation"]
+        G2 --> I2_1[Cloudflare Workers AI<br/>primary]
+        G2 --> I2_2[Hugging Face API<br/>fallback 1]
+        G2 --> I2_3[Local saved_images/<br/>fallback 2]
     end
 
     WORKER -->|stores result| D
