@@ -723,7 +723,16 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       }
     ];
 
-    const exportToPDF = () => {
+    const exportToPDF = async () => {
+      const cleanText = (text) => {
+        if (!text) return '';
+        let cleaned = text.replace(/\\n/g, '\n');
+        cleaned = cleaned.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF]|\uD83D[\uDE00-\uDE4F]/g, '');
+        cleaned = cleaned.replace(/[✨💎🏆🚀🔥🌟⚡🎁🏡🌿🎨🎉]/g, '');
+        cleaned = cleaned.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+        return cleaned;
+      };
+
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -770,7 +779,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFontSize(22);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
 
-      const titleLines = doc.splitTextToSize(result.product_name.toUpperCase(), contentWidth);
+      const titleLines = doc.splitTextToSize(cleanText(result.product_name).toUpperCase(), contentWidth);
       doc.text(titleLines, margin, yPos);
       yPos += titleLines.length * 8 + 4;
 
@@ -778,14 +787,14 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(13);
       doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-      doc.text(`"${copy.headline || 'Premium Marketing Campaign'}"`, margin, yPos);
+      doc.text(`"${cleanText(copy.headline || 'Premium Marketing Campaign')}"`, margin, yPos);
       yPos += 10;
 
       // Tone & Target Audience info
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(mutedTextColor[0], mutedTextColor[1], mutedTextColor[2]);
-      doc.text(`Campaign Tone: ${result.tone.charAt(0).toUpperCase() + result.tone.slice(1)}   |   Target Audience: ${result.target_audience || 'General B2C'}`, margin, yPos);
+      doc.text(`Campaign Tone: ${result.tone.charAt(0).toUpperCase() + result.tone.slice(1)}   |   Target Audience: ${cleanText(result.target_audience) || 'General B2C'}`, margin, yPos);
       yPos += 5;
 
       doc.setDrawColor(226, 232, 240);
@@ -802,7 +811,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      const descLines = doc.splitTextToSize(result.product_description || '', contentWidth);
+      const descLines = doc.splitTextToSize(cleanText(result.product_description) || '', contentWidth);
       doc.text(descLines, margin, yPos);
       yPos += descLines.length * 5.5 + 10;
 
@@ -819,7 +828,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
 
       const rawBlog = blogPost || '';
-      const paragraphs = rawBlog.split('\n');
+      const paragraphs = cleanText(rawBlog).split('\n');
 
       paragraphs.forEach((para) => {
         const cleanPara = para.trim();
@@ -883,9 +892,9 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       const tweetsList = tweets || [];
       tweetsList.forEach((tweet, index) => {
         const prodNameClean = (result.product_name || 'Brand').split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
-        const cleanedTweet = tweet.includes('#')
-          ? tweet
-          : `${tweet} #${prodNameClean} #Innovation`;
+        const cleanedTweet = cleanText(tweet).includes('#')
+          ? cleanText(tweet)
+          : `${cleanText(tweet)} #${prodNameClean} #Innovation`;
 
         const lines = doc.splitTextToSize(cleanedTweet, contentWidth - 10);
         const blockHeight = lines.length * 5 + 10;
@@ -909,7 +918,7 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
       yPos += 6;
 
       // SEO Tags
-      if (copy.seo_tags && copy.seo_tags.length > 0) {
+      if (seoTags && seoTags.length > 0) {
         checkPageBreak(30);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(13);
@@ -921,14 +930,14 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         doc.setFontSize(9.5);
         doc.setTextColor(textColor[0], textColor[1], textColor[2]);
 
-        const tagsString = copy.seo_tags.map(tag => `#${tag}`).join('    ');
+        const tagsString = seoTags.map(tag => `#${cleanText(tag)}`).join('    ');
         const tagLines = doc.splitTextToSize(tagsString, contentWidth);
         doc.text(tagLines, margin, yPos);
         yPos += tagLines.length * 5.5 + 12;
       }
 
-      // Images Page
-      if (assetUrls && assetUrls.length > 0) {
+      // Images Page - Captures the full absolute overlays using html2canvas!
+      if (imageRef1.current || imageRef2.current) {
         doc.addPage();
         drawHeaderFooter(doc.internal.getNumberOfPages());
         yPos = 25;
@@ -939,62 +948,48 @@ export default function ResultsDisplay({ taskId, status, progressStep, result, e
         doc.text("Promotional AI-Generated Graphics", margin, yPos);
         yPos += 10;
 
-        const finalAssetUrls = [
-          customImage1 || assetUrls[0],
-          customImage2 || assetUrls[1]
-        ].filter(Boolean);
-        finalAssetUrls.forEach((url, index) => {
-          checkPageBreak(95);
-
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10.5);
-          doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-          doc.text(`Promotional Graphic #${index + 1}`, margin, yPos);
-          yPos += 6;
-
+        // Render Image 1 with text overlays
+        if (imageRef1.current) {
           try {
-            const format = url.includes('png') ? 'PNG' : 'JPEG';
-            doc.addImage(url, format, margin, yPos, 80, 80);
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9.5);
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            const bannerInfo = banners[index] || {};
-            const textX = margin + 85;
-            let textY = yPos + 10;
-
-            doc.text("Banner Overlay Copy:", textX, textY);
-            textY += 6;
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8.5);
-            doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-
-            doc.text(`Badge: ${bannerInfo.badge || '✨ EXCLUSIVE'}`, textX, textY);
-            textY += 5;
-            doc.text(`Title: ${bannerInfo.title || 'PREMIUM'}`, textX, textY);
-            textY += 5;
-            doc.text(`Feature 1: ${bannerInfo.bullet1 || ''}`, textX, textY);
-            textY += 5;
-            doc.text(`Feature 2: ${bannerInfo.bullet2 || ''}`, textX, textY);
-            textY += 5;
-            doc.text(`Tag: ${bannerInfo.extra_tag || ''}`, textX, textY);
-            textY += 6;
-
-            doc.setFont('helvetica', 'italic');
-            const supportingMessageLines = doc.splitTextToSize(bannerInfo.supporting_message || '', contentWidth - 85);
-            doc.text(supportingMessageLines, textX, textY);
-
-          } catch (imgError) {
-            doc.setFont('helvetica', 'italic');
-            doc.setFontSize(9.5);
-            doc.setTextColor(239, 68, 68);
-            doc.text(`[Unable to embed image: ${imgError.message}]`, margin, yPos + 10);
+            const canvas1 = await html2canvas(imageRef1.current, {
+              useCORS: true,
+              allowTaint: true,
+              scale: 2,
+              backgroundColor: '#0f172a',
+              logging: false,
+              width: imageRef1.current.offsetWidth,
+              height: imageRef1.current.offsetHeight
+            });
+            const imgData1 = canvas1.toDataURL('image/jpeg', 0.95);
+            doc.addImage(imgData1, 'JPEG', margin, yPos, 100, 100);
+            yPos += 105;
+          } catch (err1) {
+            console.error("Failed to render Image 1 overlay canvas:", err1);
+            yPos += 15;
           }
-          yPos += 88;
-        });
-      }
+        }
 
+        // Render Image 2 with text overlays
+        if (imageRef2.current) {
+          checkPageBreak(105);
+          try {
+            const canvas2 = await html2canvas(imageRef2.current, {
+              useCORS: true,
+              allowTaint: true,
+              scale: 2,
+              backgroundColor: '#0f172a',
+              logging: false,
+              width: imageRef2.current.offsetWidth,
+              height: imageRef2.current.offsetHeight
+            });
+            const imgData2 = canvas2.toDataURL('image/jpeg', 0.95);
+            doc.addImage(imgData2, 'JPEG', margin, yPos, 100, 100);
+            yPos += 105;
+          } catch (err2) {
+            console.error("Failed to render Image 2 overlay canvas:", err2);
+          }
+        }
+      }
       const slug = result.product_name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       doc.save(`campaign-${slug}.pdf`);
     };
